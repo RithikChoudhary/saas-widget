@@ -211,7 +211,7 @@ const LandingPage: React.FC = () => {
               <Star className="w-4 h-4 mr-2" />
               Built for modern SaaS management
             </div>
-            <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight">
               Master Your
               <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 SaaS Universe

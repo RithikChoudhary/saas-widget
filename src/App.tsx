@@ -1,5 +1,11 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { LandingPage, LoginPage, RegisterPage } from './features/auth'
+import DocumentationPage from './features/auth/DocumentationPage'
+import UserManagementSolutionPage from './features/auth/UserManagementSolutionPage'
+import CostOptimizationSolutionPage from './features/auth/CostOptimizationSolutionPage'
+import SecurityComplianceSolutionPage from './features/auth/SecurityComplianceSolutionPage'
+import BlogPage from './features/auth/BlogPage'
+import SupportPage from './features/auth/SupportPage'
 import { Dashboard } from './features/dashboard'
 import { Users } from './features/users'
 import { CompanySettings } from './features/company'
@@ -42,6 +48,12 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/documentation" element={<DocumentationPage />} />
+          <Route path="/user-management" element={<UserManagementSolutionPage />} />
+          <Route path="/cost-optimization" element={<CostOptimizationSolutionPage />} />
+          <Route path="/security-compliance" element={<SecurityComplianceSolutionPage />} />
+          <Route path="/blog" element={<BlogPage />} />
+          <Route path="/support" element={<SupportPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/apps" element={<AppsOverview />} />
           <Route path="/users" element={<Users />} />

@@ -397,7 +397,7 @@ const AppConnectionModal: React.FC<AppConnectionModalProps> = ({
     setStep('testing');
 
     try {
-      const response = await fetch('http://localhost:5000/api/real-sync/test-connection', {
+      const response = await fetch('http://server.saasdor.com:5000//api/real-sync/test-connection', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -431,7 +431,7 @@ const AppConnectionModal: React.FC<AppConnectionModalProps> = ({
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:5000/api/real-sync/sync/${appId}`, {
+      const response = await fetch(`http://server.saasdor.com:5000/api/real-sync/sync/${appId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`

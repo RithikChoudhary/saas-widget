@@ -135,20 +135,58 @@ const SupportPage: React.FC = () => {
         {/* Support Channels */}
         <section className="mb-16">
           <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">Get Support</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {supportChannels.map((channel, index) => (
-              <div key={index} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center hover:shadow-md transition-shadow">
-                <div className={`w-12 h-12 bg-${channel.color}-100 rounded-lg flex items-center justify-center mx-auto mb-4`}>
-                  <channel.icon className={`w-6 h-6 text-${channel.color}-600`} />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {supportChannels.map((channel, index) => {
+              const getColorClasses = (color: string) => {
+                switch (color) {
+                  case 'blue':
+                    return {
+                      bg: 'bg-blue-100',
+                      text: 'text-blue-600',
+                      button: 'bg-blue-600 hover:bg-blue-700'
+                    }
+                  case 'green':
+                    return {
+                      bg: 'bg-green-100',
+                      text: 'text-green-600',
+                      button: 'bg-green-600 hover:bg-green-700'
+                    }
+                  case 'purple':
+                    return {
+                      bg: 'bg-purple-100',
+                      text: 'text-purple-600',
+                      button: 'bg-purple-600 hover:bg-purple-700'
+                    }
+                  case 'orange':
+                    return {
+                      bg: 'bg-orange-100',
+                      text: 'text-orange-600',
+                      button: 'bg-orange-600 hover:bg-orange-700'
+                    }
+                  default:
+                    return {
+                      bg: 'bg-gray-100',
+                      text: 'text-gray-600',
+                      button: 'bg-gray-600 hover:bg-gray-700'
+                    }
+                }
+              }
+              const colors = getColorClasses(channel.color)
+              
+              return (
+                <div key={index} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center hover:shadow-md transition-shadow">
+                  <div className={`w-12 h-12 ${colors.bg} rounded-lg flex items-center justify-center mx-auto mb-4`}>
+                    <channel.icon className={`w-6 h-6 ${colors.text}`} />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{channel.title}</h3>
+                  <p className="text-gray-600 mb-3">{channel.description}</p>
+                  <p className="text-sm text-gray-500 mb-4">{channel.availability}</p>
+                  <button className={`w-full ${colors.button} text-white py-2 px-4 rounded-lg font-medium transition-colors`}>
+                    {channel.action}
+                  </button>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{channel.title}</h3>
-                <p className="text-gray-600 mb-3">{channel.description}</p>
-                <p className="text-sm text-gray-500 mb-4">{channel.availability}</p>
-                <button className={`w-full bg-${channel.color}-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-${channel.color}-700 transition-colors`}>
-                  {channel.action}
-                </button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </section>
 
