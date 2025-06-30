@@ -58,7 +58,7 @@ const RegisterPage: React.FC = () => {
 
     try {
       const { confirmPassword, ...submitData } = formData
-      const response = await axios.post('/api/auth/register', {
+      const response = await axios.post('http://server.saasdor.com:5000/api/auth/register', {
         ...submitData,
         acceptTerms: true
       })

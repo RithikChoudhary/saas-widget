@@ -28,7 +28,7 @@ const LoginPage: React.FC = () => {
     setError('')
 
     try {
-      const response = await axios.post('/api/auth/login', formData)
+      const response = await axios.post('http://server.saasdor.com:5000/api/auth/login', formData)
       
       if (response.data.success) {
         // Store tokens
