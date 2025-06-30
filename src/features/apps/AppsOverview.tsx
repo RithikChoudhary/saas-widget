@@ -73,12 +73,12 @@ const AppsOverview: React.FC = () => {
         
         // Fetch data from multiple endpoints to get comprehensive service status
         const [credentialsResponse, analyticsResponse] = await Promise.allSettled([
-          fetch('/api/credentials', {
+          fetch(`${import.meta.env.VITE_API_BASE_URL}/api/credentials`, {
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
             }
           }),
-          fetch('/api/analytics/dashboard', {
+          fetch(`${import.meta.env.VITE_API_BASE_URL}/api/analytics/dashboard`, {
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
             }
