@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Cloud, Lock, Mail, Eye, EyeOff, ArrowLeft } from 'lucide-react'
-import axios from 'axios'
+import api from '../../shared/utils/api'
 
 const LoginPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -28,12 +28,13 @@ const LoginPage: React.FC = () => {
     setError('')
 
     try {
-      const response = await axios.post('http://server.saasdor.com:5000/api/auth/login', formData)
+      const response = await api.post('/auth/login', formData)
       
       if (response.data.success) {
-        // Store tokens
-        localStorage.setItem('accessToken', response.data.data.tokens.accessToken)
-        localStorage.setItem('refreshToken', response.data.data.tokens.refreshToken)
+        // Store tokens - handle both token structures
+        const tokens = response.data.data.tokens || response.data.data;
+        localStorage.setItem('accessToken', tokens.accessToken)
+        localStorage.setItem('refreshToken', tokens.refreshToken)
         
         // Redirect to dashboard
         navigate('/dashboard')
