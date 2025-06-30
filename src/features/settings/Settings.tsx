@@ -71,7 +71,7 @@ const Settings: React.FC = () => {
 
   const fetchUserProfile = async () => {
     try {
-      const response = await axios.get('http://server.saasdor.com:5000/api/users/profile', {
+      const response = await axios.get('https://server.saasdor.com/api/users/profile', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
@@ -98,7 +98,7 @@ const Settings: React.FC = () => {
   const fetchCompanyInfo = async () => {
     try {
       console.log('🏢 Settings: Fetching company info...');
-      const response = await axios.get('http://server.saasdor.com:5000/api/company', {
+      const response = await axios.get('https://server.saasdor.com:5000/api/company', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
@@ -141,7 +141,7 @@ const Settings: React.FC = () => {
 
   const fetchOrgUsers = async () => {
     try {
-      const response = await axios.get('http://server.saasdor.com:5000/api/users/company', {
+      const response = await axios.get('https://server.saasdor.com:5000/api/users/company', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
@@ -165,7 +165,7 @@ const Settings: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await axios.put('http://server.saasdor.com:5000/api/users/profile', profile, {
+      const response = await axios.put('https://server.saasdor.com:5000/api/users/profile', profile, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
