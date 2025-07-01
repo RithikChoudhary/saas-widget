@@ -74,7 +74,7 @@ const AWSUsers: React.FC = () => {
 
   const fetchAvailableAccounts = async () => {
     try {
-      const response = await fetch('/api/integrations/aws/accounts', {
+      const response = await fetch('http://localhost:5000/api/integrations/aws/accounts', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
@@ -99,7 +99,7 @@ const AWSUsers: React.FC = () => {
       setLoading(true);
       console.log('🔍 Fetching AWS users from API...');
       
-      const response = await fetch('/api/integrations/aws/iam/users', {
+      const response = await fetch('http://localhost:5000/api/integrations/aws/iam/users', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
@@ -136,7 +136,7 @@ const AWSUsers: React.FC = () => {
     try {
       console.log('🔍 Fetching AWS groups from API...');
       
-      const response = await fetch('/api/integrations/aws/iam/groups', {
+      const response = await fetch('http://localhost:5000/api/integrations/aws/iam/groups', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
@@ -172,7 +172,7 @@ const AWSUsers: React.FC = () => {
       setSyncing(true);
       console.log('🔄 Starting AWS user sync...');
       
-      const response = await fetch('/api/integrations/aws/iam/users/sync', {
+      const response = await fetch('http://localhost:5000/api/integrations/aws/iam/users/sync', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
@@ -206,7 +206,7 @@ const AWSUsers: React.FC = () => {
     try {
       console.log('🔄 Creating AWS user:', userData);
       
-      const response = await fetch('/api/integrations/aws/iam/users', {
+      const response = await fetch('http://localhost:5000/api/integrations/aws/iam/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -238,7 +238,7 @@ const AWSUsers: React.FC = () => {
     try {
       console.log('🔄 Updating AWS user:', userId, userData);
       
-      const response = await fetch(`/api/integrations/aws/iam/users/${userId}`, {
+      const response = await fetch(`http://localhost:5000/api/integrations/aws/iam/users/${userId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -277,7 +277,7 @@ const AWSUsers: React.FC = () => {
     try {
       console.log('🗑️ Deleting AWS user:', userId);
       
-      const response = await fetch(`/api/integrations/aws/iam/users/${userId}`, {
+      const response = await fetch(`http://localhost:5000/api/integrations/aws/iam/users/${userId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
