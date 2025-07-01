@@ -15,8 +15,8 @@ import {
   Users,
   Building
 } from 'lucide-react';
-import { Layout } from '../../../shared/components';
-import api from '../../../shared/utils/api';
+import { Layout } from '../../../../../shared/components';
+import api from '../../../../../shared/utils/api';
 
 interface Connection {
   id: string;

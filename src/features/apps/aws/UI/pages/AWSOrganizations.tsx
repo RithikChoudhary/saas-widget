@@ -15,7 +15,7 @@ import {
   CheckCircle,
   XCircle
 } from 'lucide-react';
-import { Layout } from '../../../shared/components';
+import { Layout } from '../../../../../shared/components';
 
 interface OrganizationalUnit {
   id: string;
@@ -54,7 +54,7 @@ const AWSOrganizations: React.FC = () => {
       setLoading(true);
       
       // Fetch organizational units
-      const ouResponse = await fetch('/api/integrations/aws/organizations/units', {
+      const ouResponse = await fetch('http://localhost:5000/api/integrations/aws/organizations/units', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
@@ -68,7 +68,7 @@ const AWSOrganizations: React.FC = () => {
       }
 
       // Fetch accounts
-      const accountsResponse = await fetch('/api/integrations/aws/organizations/accounts', {
+      const accountsResponse = await fetch('http://localhost:5000/api/integrations/aws/organizations/accounts', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
@@ -91,7 +91,7 @@ const AWSOrganizations: React.FC = () => {
     try {
       setSyncing(true);
       
-      const response = await fetch('/api/integrations/aws/organizations/sync', {
+      const response = await fetch('http://localhost:5000/api/integrations/aws/organizations/sync', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`

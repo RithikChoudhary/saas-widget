@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Layout } from '../../../shared/components';
-import api from '../../../shared/utils/api';
+import { Layout } from '../../../../../shared/components';
+import api from '../../../../../shared/utils/api';
 import { Plus, Users, MessageCircle, Settings, Activity, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface SlackWorkspace {

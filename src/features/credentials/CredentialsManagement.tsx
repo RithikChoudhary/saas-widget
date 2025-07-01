@@ -44,12 +44,21 @@ const CredentialsManagement: React.FC = () => {
   const appTypes = [
     { id: 'slack', name: 'Slack', icon: '💬', description: 'Team communication platform', color: 'bg-purple-100 text-purple-800' },
     { id: 'zoom', name: 'Zoom', icon: '📹', description: 'Video conferencing platform', color: 'bg-blue-100 text-blue-800' },
-    { id: 'google-workspace', name: 'Google Workspace', icon: '📧', description: 'Google productivity suite', color: 'bg-green-100 text-green-800' },
     { id: 'github', name: 'GitHub', icon: '🐙', description: 'Code repository platform', color: 'bg-gray-100 text-gray-800' },
     { id: 'aws', name: 'Amazon Web Services', icon: '☁️', description: 'Cloud computing platform', color: 'bg-orange-100 text-orange-800' },
     { id: 'azure', name: 'Microsoft Azure', icon: '🔷', description: 'Microsoft cloud platform', color: 'bg-blue-100 text-blue-800' },
     { id: 'office365', name: 'Microsoft 365', icon: '📊', description: 'Microsoft productivity suite', color: 'bg-red-100 text-red-800' }
   ];
+
+  // Special handling for Google Workspace - prioritize OAuth
+  const googleWorkspaceApp = { 
+    id: 'google-workspace', 
+    name: 'Google Workspace', 
+    icon: '📧', 
+    description: 'Google productivity suite (OAuth recommended)', 
+    color: 'bg-green-100 text-green-800',
+    preferredMethod: 'oauth'
+  };
 
   useEffect(() => {
     fetchCredentials();
@@ -60,9 +69,49 @@ const CredentialsManagement: React.FC = () => {
       setLoading(true);
       console.log('🔍 Credentials: Fetching credentials...');
       
-      const response = await api.get('/credentials');
-      console.log('📡 Credentials: Response:', response.data);
-      setCredentials(response.data.data || []);
+      // Fetch both regular credentials and Google Workspace connections
+      const [credentialsResponse, googleWorkspaceResponse] = await Promise.allSettled([
+        api.get('/credentials'),
+        api.get('/integrations/google-workspace/connections')
+      ]);
+
+      let allCredentials: Credential[] = [];
+
+      // Process regular credentials
+      if (credentialsResponse.status === 'fulfilled') {
+        console.log('📡 Credentials: Response:', credentialsResponse.value.data);
+        allCredentials = credentialsResponse.value.data.data || [];
+      }
+
+      // Process Google Workspace connections
+      if (googleWorkspaceResponse.status === 'fulfilled' && googleWorkspaceResponse.value.data.success) {
+        const gwConnections = googleWorkspaceResponse.value.data.connections || [];
+        console.log('📡 Google Workspace Connections:', gwConnections);
+        
+        // Convert Google Workspace connections to credential format
+        const gwCredentials: Credential[] = gwConnections.map((conn: any) => ({
+          id: conn._id,
+          appType: 'google-workspace',
+          appName: `${conn.domain} (${conn.connectionType})`,
+          isActive: conn.isActive,
+          createdAt: conn.createdAt,
+          hasCredentials: true,
+          connectionStatus: {
+            isConnected: conn.isActive,
+            lastSync: conn.lastSync,
+            requiresOAuth: false,
+            connectionDetails: {
+              domain: conn.domain,
+              organizationName: conn.organizationName,
+              connectionType: conn.connectionType
+            }
+          }
+        }));
+
+        allCredentials = [...allCredentials, ...gwCredentials];
+      }
+
+      setCredentials(allCredentials);
     } catch (error) {
       console.error('❌ Credentials: Error fetching credentials:', error);
     } finally {
@@ -389,11 +438,75 @@ const CredentialsManagement: React.FC = () => {
           </div>
         )}
 
+        {/* Google Workspace - Special Section */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-xl font-semibold">Google Workspace</h2>
+            <p className="text-sm text-gray-600">Connect your Google Workspace domain (OAuth recommended)</p>
+          </div>
+          <div className="p-6">
+            <div className="border-2 border-green-200 rounded-lg p-4 bg-green-50">
+              <div className="flex items-center space-x-3 mb-4">
+                <span className="text-3xl">{googleWorkspaceApp.icon}</span>
+                <div className="flex-1">
+                  <h3 className="font-medium text-green-900">{googleWorkspaceApp.name}</h3>
+                  <p className="text-sm text-green-700">{googleWorkspaceApp.description}</p>
+                </div>
+                <span className="bg-green-200 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                  Recommended
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white rounded-lg p-4 border border-green-200">
+                  <h4 className="font-medium text-green-900 mb-2 flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                    OAuth Connection (Recommended)
+                  </h4>
+                  <p className="text-sm text-green-700 mb-3">
+                    Quick setup with Google OAuth. No manual credential management required.
+                  </p>
+                  <button
+                    onClick={() => window.location.href = '/apps/google-workspace'}
+                    className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    Connect via OAuth
+                  </button>
+                </div>
+                
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                    <Key className="h-4 w-4 mr-2 text-gray-600" />
+                    Service Account (Advanced)
+                  </h4>
+                  <p className="text-sm text-gray-600 mb-3">
+                    For advanced users. Requires manual setup of service account credentials.
+                  </p>
+                  <button
+                    onClick={() => handleAddCredentials('google-workspace')}
+                    className="w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    Add Service Account
+                  </button>
+                </div>
+              </div>
+              
+              {groupedCredentials['google-workspace'] && (
+                <div className="mt-4 p-3 bg-white rounded border border-green-200">
+                  <p className="text-sm text-green-700">
+                    ✓ {groupedCredentials['google-workspace'].length} Google Workspace connection(s) configured
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Available Apps to Configure */}
         <div className="bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-semibold">Available Applications</h2>
-            <p className="text-sm text-gray-600">Add credentials for new applications or additional accounts</p>
+            <h2 className="text-xl font-semibold">Other Applications</h2>
+            <p className="text-sm text-gray-600">Add credentials for other applications and services</p>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

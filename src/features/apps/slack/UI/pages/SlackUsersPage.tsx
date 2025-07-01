@@ -13,8 +13,8 @@ import {
   Crown,
   Clock
 } from 'lucide-react';
-import { Layout } from '../../../shared/components';
-import api from '../../../shared/utils/api';
+import { Layout } from '../../../../../shared/components';
+import api from '../../../../../shared/utils/api';
 
 interface SlackUser {
   id: string;

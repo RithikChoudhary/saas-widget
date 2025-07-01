@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Layout } from '../../../shared/components';
-import api from '../../../shared/utils/api';
+import { Layout } from '../../../../../shared/components';
+import api from '../../../../../shared/utils/api';
 import { GitBranch, Star, Eye, Users, Code, CheckCircle, AlertCircle, Lock, Unlock } from 'lucide-react';
 
 interface GitHubRepository {

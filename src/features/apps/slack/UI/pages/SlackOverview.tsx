@@ -16,8 +16,8 @@ import {
   Clock,
   RefreshCw
 } from 'lucide-react';
-import api from '../../../shared/utils/api';
-import { Layout } from '../../../shared/components';
+import api from '../../../../../shared/utils/api';
+import { Layout } from '../../../../../shared/components';
 
 interface SlackStats {
   totalConnections: number;

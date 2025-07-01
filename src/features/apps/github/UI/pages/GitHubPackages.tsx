@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layout } from '../../../shared/components';
+import { Layout } from '../../../../../shared/components';
 import { Package, Archive, Download, Upload, Shield, Clock, AlertCircle } from 'lucide-react';
 
 const GitHubPackages: React.FC = () => {

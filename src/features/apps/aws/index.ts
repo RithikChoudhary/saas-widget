@@ -1,6 +1,18 @@
-export { default as AWSConnections } from './AWSConnections';
-export { default as AWSOverview } from './AWSOverview';
-export { default as AWSUsers } from './AWSUsers';
-export { default as AWSOrganizations } from './AWSOrganizations';
-export { default as AWSResources } from './AWSResources';
-export { default as AWSBilling } from './AWSBilling';
+// Export all AWS UI components and pages from the UI folder
+export {
+  AWSOverview,
+  AWSUsers,
+  AWSBilling,
+  AWSConnections,
+  AWSOrganizations,
+  AWSResources,
+  CreateGroupModal,
+  CreateUserModal,
+  EditUserModal,
+  LambdaFunctionsList,
+  RDSInstancesList,
+  S3BucketsList
+} from './UI';
+
+// Export AWS services (integration logic) - services folder already exists
+export * from './services/awsApi';

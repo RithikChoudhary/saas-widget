@@ -25,8 +25,8 @@ import {
   EyeOff,
   Info
 } from 'lucide-react';
-import { Layout } from '../../../shared/components';
-import { awsApi } from './services/awsApi';
+import { Layout } from '../../../../../shared/components';
+import { awsApi } from '../../services/awsApi';
 
 interface AWSAccount {
   id: string;

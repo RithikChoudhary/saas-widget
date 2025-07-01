@@ -19,10 +19,10 @@ import {
   Cpu,
   Zap
 } from 'lucide-react';
-import { Layout } from '../../../shared/components';
-import S3BucketsList from './components/S3BucketsList';
-import LambdaFunctionsList from './components/LambdaFunctionsList';
-import RDSInstancesList from './components/RDSInstancesList';
+import { Layout } from '../../../../../shared/components';
+import S3BucketsList from '../components/S3BucketsList';
+import LambdaFunctionsList from '../components/LambdaFunctionsList';
+import RDSInstancesList from '../components/RDSInstancesList';
 
 interface ResourceSummary {
   ec2Instances: {
@@ -93,7 +93,7 @@ const AWSResources: React.FC = () => {
 
       switch (selectedResourceType) {
         case 'ec2':
-          const ec2Response = await fetch('/api/integrations/aws/resources/ec2', { headers });
+          const ec2Response = await fetch('http://localhost:5000/api/integrations/aws/resources/ec2', { headers });
           if (ec2Response.ok) {
             const ec2Data = await ec2Response.json();
             if (ec2Data.success) {
@@ -103,7 +103,7 @@ const AWSResources: React.FC = () => {
           break;
 
         case 's3':
-          const s3Response = await fetch('/api/integrations/aws/resources?resourceType=S3', { headers });
+          const s3Response = await fetch('http://localhost:5000/api/integrations/aws/resources?resourceType=S3', { headers });
           if (s3Response.ok) {
             const s3Data = await s3Response.json();
             if (s3Data.success) {
@@ -113,7 +113,7 @@ const AWSResources: React.FC = () => {
           break;
 
         case 'lambda':
-          const lambdaResponse = await fetch('/api/integrations/aws/resources?resourceType=Lambda', { headers });
+          const lambdaResponse = await fetch('http://localhost:5000/api/integrations/aws/resources?resourceType=Lambda', { headers });
           if (lambdaResponse.ok) {
             const lambdaData = await lambdaResponse.json();
             if (lambdaData.success) {
@@ -123,7 +123,7 @@ const AWSResources: React.FC = () => {
           break;
 
         case 'rds':
-          const rdsResponse = await fetch('/api/integrations/aws/resources?resourceType=RDS', { headers });
+          const rdsResponse = await fetch('http://localhost:5000/api/integrations/aws/resources?resourceType=RDS', { headers });
           if (rdsResponse.ok) {
             const rdsData = await rdsResponse.json();
             if (rdsData.success) {
@@ -142,7 +142,7 @@ const AWSResources: React.FC = () => {
       setLoading(true);
       
       // Fetch resource summary
-      const summaryResponse = await fetch('/api/integrations/aws/resources/summary', {
+      const summaryResponse = await fetch('http://localhost:5000/api/integrations/aws/resources/summary', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
@@ -168,7 +168,7 @@ const AWSResources: React.FC = () => {
     try {
       setSyncing(true);
       
-      const response = await fetch('/api/integrations/aws/resources/sync', {
+      const response = await fetch('http://localhost:5000/api/integrations/aws/resources/sync', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`

@@ -6,7 +6,7 @@ import CostOptimizationSolutionPage from './features/auth/CostOptimizationSoluti
 import SecurityComplianceSolutionPage from './features/auth/SecurityComplianceSolutionPage'
 import BlogPage from './features/auth/BlogPage'
 import SupportPage from './features/auth/SupportPage'
-import { Dashboard } from './features/dashboard'
+import { Dashboard, ActivityPage } from './features/dashboard'
 import { Users } from './features/users'
 import { CompanySettings } from './features/company'
 import { Settings } from './features/settings'
@@ -23,13 +23,15 @@ import {
   GitHubUsers,
   GitHubTeams,
   GitHubRepositories,
+  GitHubConnections,
   SlackOverview,
+  SlackUsersPage,
+  SlackWorkspaces,
   ZoomOverview,
-  GoogleWorkspaceOverview
+  GoogleWorkspaceOverview,
+  GoogleWorkspaceUsers,
+  GoogleWorkspaceGroups
 } from './features/apps'
-import GitHubConnections from './features/apps/github/GitHubConnections'
-import SlackUsersPage from './features/apps/slack/SlackUsersPage'
-import SlackWorkspaces from './features/apps/slack/SlackWorkspaces'
 import { CredentialsManagement } from './features/credentials'
 import {
   AnalyticsDashboard,
@@ -55,6 +57,7 @@ function App() {
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/support" element={<SupportPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/activity" element={<ActivityPage />} />
           <Route path="/apps" element={<AppsOverview />} />
           <Route path="/users" element={<Users />} />
           <Route path="/credentials" element={<CredentialsManagement />} />
@@ -227,22 +230,8 @@ function App() {
           
           {/* Google Workspace Routes */}
           <Route path="/apps/google-workspace" element={<GoogleWorkspaceOverview />} />
-          <Route path="/apps/google-workspace/users" element={
-            <Layout>
-              <div className="p-8 text-center">
-                <h1 className="text-2xl font-bold text-gray-900 mb-4">Google Workspace Users</h1>
-                <p className="text-gray-600">Coming Soon - User management and ghost user detection</p>
-              </div>
-            </Layout>
-          } />
-          <Route path="/apps/google-workspace/groups" element={
-            <Layout>
-              <div className="p-8 text-center">
-                <h1 className="text-2xl font-bold text-gray-900 mb-4">Google Workspace Groups</h1>
-                <p className="text-gray-600">Coming Soon - Groups and organizational units</p>
-              </div>
-            </Layout>
-          } />
+          <Route path="/apps/google-workspace/users" element={<GoogleWorkspaceUsers />} />
+          <Route path="/apps/google-workspace/groups" element={<GoogleWorkspaceGroups />} />
           <Route path="/apps/google-workspace/security" element={
             <Layout>
               <div className="p-8 text-center">

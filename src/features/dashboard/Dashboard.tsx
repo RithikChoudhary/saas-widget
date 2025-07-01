@@ -16,7 +16,17 @@ import {
   Building2,
   Globe,
   Lock,
-  UserCheck
+  UserCheck,
+  RefreshCw,
+  Eye,
+  TrendingDown,
+  AlertCircle,
+  Clock,
+  Calendar,
+  Sparkles,
+  ChevronUp,
+  ChevronDown,
+  ExternalLink
 } from 'lucide-react';
 import { api } from '../../shared/utils';
 import { Layout } from '../../shared/components';
@@ -33,16 +43,18 @@ interface DashboardStats {
 interface ConnectedService {
   id: string;
   name: string;
-  type: 'aws' | 'azure' | 'office365' | 'github';
+  type: 'aws' | 'azure' | 'office365' | 'github' | 'slack' | 'zoom' | 'google-workspace';
   status: 'connected' | 'warning' | 'error';
   users: number;
   lastSync: string;
   accounts?: number;
+  monthlyCost?: number;
 }
 
 interface RecentActivity {
   id: string;
-  type: 'user_added' | 'service_connected' | 'cost_alert' | 'security_update';
+  type: 'user_added' | 'service_connected' | 'service_disconnected' | 'cost_alert' | 'security_update' | 'data_sync';
+  service: string;
   message: string;
   timestamp: string;
   severity: 'info' | 'warning' | 'success';
@@ -50,6 +62,7 @@ interface RecentActivity {
 
 const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState<DashboardStats>({
     connectedServices: 0,
@@ -72,8 +85,10 @@ const Dashboard: React.FC = () => {
     fetchDashboardData();
   }, [navigate]);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (showRefreshing = false) => {
     try {
+      if (showRefreshing) setRefreshing(true);
+      
       // Get user data from token
       const token = localStorage.getItem('accessToken');
       if (token) {
@@ -110,13 +125,12 @@ const Dashboard: React.FC = () => {
             totalUsers: data.totalUsers || 0,
             activeIntegrations: data.totalAccounts || 0,
             monthlyCost: data.monthlyCost || 0,
-            costSavings: 0, // TODO: Calculate from cost optimization data
+            costSavings: data.costSavings || 0,
             securityScore: data.securityScore || 0
           });
         }
       } catch (error) {
         console.error('Error fetching dashboard overview:', error);
-        // Set empty stats on error
         setStats({
           connectedServices: 0,
           totalUsers: 0,
@@ -139,7 +153,8 @@ const Dashboard: React.FC = () => {
             status: service.status,
             users: service.users || 0,
             lastSync: service.lastSync ? new Date(service.lastSync).toLocaleString() : 'Never',
-            accounts: service.accounts
+            accounts: service.accounts,
+            monthlyCost: service.monthlyCost || 0
           })));
         }
       } catch (error) {
@@ -155,6 +170,7 @@ const Dashboard: React.FC = () => {
           setRecentActivity(activities.map((activity: any) => ({
             id: activity.id,
             type: activity.type,
+            service: activity.service,
             message: activity.message,
             timestamp: new Date(activity.timestamp).toLocaleString(),
             severity: activity.severity
@@ -169,7 +185,12 @@ const Dashboard: React.FC = () => {
       console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = () => {
+    fetchDashboardData(true);
   };
 
   const getServiceIcon = (type: string) => {
@@ -178,16 +199,19 @@ const Dashboard: React.FC = () => {
       case 'azure': return '🔷';
       case 'office365': return '📧';
       case 'github': return '🐙';
+      case 'slack': return '💬';
+      case 'zoom': return '📹';
+      case 'google-workspace': return '📊';
       default: return '🔧';
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'connected': return 'text-green-600 bg-green-100';
-      case 'warning': return 'text-yellow-600 bg-yellow-100';
-      case 'error': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'connected': return 'text-green-600 bg-green-100 dark:bg-green-900/20 dark:text-green-400';
+      case 'warning': return 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400';
+      case 'error': return 'text-red-600 bg-red-100 dark:bg-red-900/20 dark:text-red-400';
+      default: return 'text-gray-600 bg-gray-100 dark:bg-gray-900/20 dark:text-gray-400';
     }
   };
 
@@ -195,183 +219,268 @@ const Dashboard: React.FC = () => {
     switch (type) {
       case 'user_added': return <UserCheck className="h-4 w-4" />;
       case 'service_connected': return <CheckCircle className="h-4 w-4" />;
+      case 'service_disconnected': return <AlertTriangle className="h-4 w-4" />;
       case 'cost_alert': return <DollarSign className="h-4 w-4" />;
       case 'security_update': return <Shield className="h-4 w-4" />;
+      case 'data_sync': return <RefreshCw className="h-4 w-4" />;
       default: return <Activity className="h-4 w-4" />;
     }
   };
 
   const getActivityColor = (severity: string) => {
     switch (severity) {
-      case 'success': return 'text-green-600';
-      case 'warning': return 'text-yellow-600';
-      case 'info': return 'text-blue-600';
-      default: return 'text-gray-600';
+      case 'success': return 'text-green-600 dark:text-green-400';
+      case 'warning': return 'text-yellow-600 dark:text-yellow-400';
+      case 'info': return 'text-blue-600 dark:text-blue-400';
+      default: return 'text-gray-600 dark:text-gray-400';
     }
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    return date.toLocaleDateString();
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
+      <Layout>
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="animate-pulse">
+              <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-2xl mb-8"></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
+                ))}
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="h-96 bg-gray-200 dark:bg-gray-700 rounded-2xl"></div>
+                <div className="h-96 bg-gray-200 dark:bg-gray-700 rounded-2xl"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Layout>
     );
   }
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
         {/* Hero Section */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-700 text-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div className="text-center">
-              <h1 className="text-4xl font-bold mb-4">
-                Welcome to {user?.company} SaaS Management Platform
-              </h1>
-              <p className="text-xl text-blue-100 mb-8 max-w-3xl mx-auto">
-                Centralize, secure, and optimize all your cloud services and applications from one powerful dashboard
-              </p>
-              <div className="flex justify-center space-x-4">
+        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 dark:from-blue-800 dark:via-purple-800 dark:to-blue-900 text-white relative overflow-hidden">
+          <div className="absolute inset-0 bg-black/10 dark:bg-black/20"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 dark:from-blue-800/30 dark:to-purple-800/30"></div>
+          
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                    <Sparkles className="h-7 w-7 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-4xl font-bold">Welcome back, {user?.name?.split(' ')[0] || 'User'}</h1>
+                    <p className="text-blue-100 dark:text-blue-200 text-lg">{user?.company} Dashboard</p>
+                  </div>
+                </div>
+                <p className="text-xl text-blue-100 dark:text-blue-200 max-w-3xl">
+                  Monitor and manage all your cloud services from one powerful dashboard
+                </p>
+              </div>
+              
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="flex items-center px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-xl hover:bg-white/30 transition-all duration-200 disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                  {refreshing ? 'Refreshing...' : 'Refresh'}
+                </button>
                 <button
                   onClick={() => navigate('/apps')}
-                  className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors flex items-center"
+                  className="flex items-center px-6 py-3 bg-white text-blue-600 rounded-xl font-semibold hover:bg-blue-50 transition-all duration-200 shadow-lg"
                 >
                   <Plus className="h-5 w-5 mr-2" />
-                  Connect New Service
+                  Connect Service
                 </button>
-                <button
-                  onClick={() => navigate('/users')}
-                  className="border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors"
-                >
-                  Manage Users
-                </button>
+              </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-100 dark:text-blue-200 text-sm">Services</p>
+                    <p className="text-2xl font-bold">{stats.connectedServices}</p>
+                  </div>
+                  <Cloud className="h-8 w-8 text-blue-200" />
+                </div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-100 dark:text-blue-200 text-sm">Users</p>
+                    <p className="text-2xl font-bold">{stats.totalUsers}</p>
+                  </div>
+                  <Users className="h-8 w-8 text-blue-200" />
+                </div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-100 dark:text-blue-200 text-sm">Monthly Cost</p>
+                    <p className="text-2xl font-bold">${stats.monthlyCost.toFixed(0)}</p>
+                  </div>
+                  <DollarSign className="h-8 w-8 text-blue-200" />
+                </div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-100 dark:text-blue-200 text-sm">Security</p>
+                    <p className="text-2xl font-bold">{stats.securityScore}%</p>
+                  </div>
+                  <Shield className="h-8 w-8 text-blue-200" />
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Platform Features Overview */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">What Our Platform Does</h2>
-            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              Streamline your organization's SaaS management with comprehensive tools for security, compliance, and cost optimization
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-            <div className="text-center">
-              <div className="bg-blue-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <Cloud className="h-8 w-8 text-blue-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Multi-Cloud Management</h3>
-              <p className="text-gray-600">Manage AWS, Azure, Google Cloud, and more from one interface</p>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-green-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <Users className="h-8 w-8 text-green-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">User Lifecycle Management</h3>
-              <p className="text-gray-600">Automate user provisioning, deprovisioning, and access control</p>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-purple-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <Shield className="h-8 w-8 text-purple-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Security & Compliance</h3>
-              <p className="text-gray-600">Monitor security posture and ensure compliance across all services</p>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-yellow-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <DollarSign className="h-8 w-8 text-yellow-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Cost Optimization</h3>
-              <p className="text-gray-600">Track spending, identify savings opportunities, and optimize costs</p>
-            </div>
-          </div>
-
           {/* Key Metrics Dashboard */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-12">
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Connected Services</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.connectedServices}</p>
+            <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                  <Cloud className="h-6 w-6 text-white" />
                 </div>
-                <Cloud className="h-8 w-8 text-blue-600" />
+                <div className="flex items-center text-green-600 dark:text-green-400 text-sm">
+                  <ChevronUp className="h-4 w-4" />
+                  <span>+2</span>
+                </div>
               </div>
-              <p className="text-xs text-green-600 mt-2">+2 this month</p>
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Connected Services</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.connectedServices}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Active integrations</p>
+              </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Users</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
+            <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                  <Users className="h-6 w-6 text-white" />
                 </div>
-                <Users className="h-8 w-8 text-green-600" />
+                <div className="flex items-center text-green-600 dark:text-green-400 text-sm">
+                  <ChevronUp className="h-4 w-4" />
+                  <span>+12</span>
+                </div>
               </div>
-              <p className="text-xs text-green-600 mt-2">+12 this week</p>
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Total Users</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.totalUsers}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Across all services</p>
+              </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Active Integrations</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.activeIntegrations}</p>
+            <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
+                  <Zap className="h-6 w-6 text-white" />
                 </div>
-                <Zap className="h-8 w-8 text-purple-600" />
+                <div className="flex items-center text-blue-600 dark:text-blue-400 text-sm">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Active</span>
+                </div>
               </div>
-              <p className="text-xs text-blue-600 mt-2">All systems operational</p>
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Active Integrations</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.activeIntegrations}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">All systems operational</p>
+              </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Monthly Cost</p>
-                  <p className="text-2xl font-bold text-gray-900">${stats.monthlyCost.toFixed(0)}</p>
+            <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-white" />
                 </div>
-                <DollarSign className="h-8 w-8 text-yellow-600" />
+                <div className="flex items-center text-red-600 dark:text-red-400 text-sm">
+                  <ChevronUp className="h-4 w-4" />
+                  <span>+15%</span>
+                </div>
               </div>
-              <p className="text-xs text-red-600 mt-2">+15% from last month</p>
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Monthly Cost</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">${stats.monthlyCost.toFixed(0)}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">From last month</p>
+              </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Cost Savings</p>
-                  <p className="text-2xl font-bold text-gray-900">${stats.costSavings}</p>
+            <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                  <TrendingUp className="h-6 w-6 text-white" />
                 </div>
-                <TrendingUp className="h-8 w-8 text-green-600" />
+                <div className="flex items-center text-green-600 dark:text-green-400 text-sm">
+                  <TrendingUp className="h-4 w-4" />
+                  <span>Saved</span>
+                </div>
               </div>
-              <p className="text-xs text-green-600 mt-2">Saved this quarter</p>
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Cost Savings</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">${stats.costSavings}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">This quarter</p>
+              </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Security Score</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.securityScore}%</p>
+            <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                  <Shield className="h-6 w-6 text-white" />
                 </div>
-                <Shield className="h-8 w-8 text-blue-600" />
+                <div className="flex items-center text-green-600 dark:text-green-400 text-sm">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Excellent</span>
+                </div>
               </div>
-              <p className="text-xs text-green-600 mt-2">Excellent rating</p>
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Security Score</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.securityScore}%</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Security rating</p>
+              </div>
             </div>
           </div>
 
           {/* Connected Services and Recent Activity */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
             {/* Connected Services */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
+            <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50">
+              <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">Connected Services</h3>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                      <Cloud className="h-4 w-4 text-white" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Connected Services</h3>
+                  </div>
                   <button
                     onClick={() => navigate('/apps')}
-                    className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center"
+                    className="flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium transition-colors"
                   >
                     View All <ArrowRight className="h-4 w-4 ml-1" />
                   </button>
@@ -379,98 +488,159 @@ const Dashboard: React.FC = () => {
               </div>
               <div className="p-6">
                 <div className="space-y-4">
-                  {connectedServices.map((service) => (
-                    <div key={service.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                      <div className="flex items-center">
-                        <div className="text-2xl mr-3">{getServiceIcon(service.type)}</div>
-                        <div>
-                          <div className="flex items-center">
-                            <h4 className="font-medium text-gray-900">{service.name}</h4>
-                            <span className={`ml-2 px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(service.status)}`}>
-                              {service.status}
-                            </span>
+                  {connectedServices.length > 0 ? (
+                    connectedServices.map((service) => (
+                      <div key={service.id} className="flex items-center justify-between p-4 border border-gray-200/50 dark:border-gray-700/50 rounded-xl hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-all duration-200">
+                        <div className="flex items-center space-x-4">
+                          <div className="text-2xl">{getServiceIcon(service.type)}</div>
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <h4 className="font-medium text-gray-900 dark:text-white">{service.name}</h4>
+                              <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(service.status)}`}>
+                                {service.status}
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              <span>{service.users} users</span>
+                              {service.accounts && <span>• {service.accounts} accounts</span>}
+                              {service.monthlyCost && service.monthlyCost > 0 && <span>• ${service.monthlyCost}/mo</span>}
+                            </div>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                              Last sync: {formatTimestamp(service.lastSync)}
+                            </p>
                           </div>
-                          <p className="text-sm text-gray-500">
-                            {service.users} users • Last sync: {service.lastSync}
-                            {service.accounts && ` • ${service.accounts} accounts`}
-                          </p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <button 
+                            onClick={() => navigate(`/apps/${service.type}`)}
+                            className="flex items-center px-3 py-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm transition-colors"
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </button>
+                          <button 
+                            onClick={() => navigate(`/apps/${service.type}`)}
+                            className="flex items-center px-3 py-1 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 text-sm transition-colors"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
-                      <button 
-                        onClick={() => navigate(`/apps/${service.type}`)}
-                        className="text-blue-600 hover:text-blue-800 text-sm"
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <Cloud className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No services connected</h3>
+                      <p className="text-gray-500 dark:text-gray-400 mb-4">Connect your first service to get started</p>
+                      <button
+                        onClick={() => navigate('/apps')}
+                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                       >
-                        Manage
+                        <Plus className="h-4 w-4 mr-2" />
+                        Connect Service
                       </button>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>
 
             {/* Recent Activity */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+            <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50">
+              <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                      <Activity className="h-4 w-4 text-white" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Activity</h3>
+                  </div>
+                  <button
+                    onClick={() => navigate('/activity')}
+                    className="flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium transition-colors"
+                  >
+                    View All <ArrowRight className="h-4 w-4 ml-1" />
+                  </button>
+                </div>
               </div>
               <div className="p-6">
                 <div className="space-y-4">
-                  {recentActivity.map((activity) => (
-                    <div key={activity.id} className="flex items-start">
-                      <div className={`flex-shrink-0 ${getActivityColor(activity.severity)} mt-1`}>
-                        {getActivityIcon(activity.type)}
+                  {recentActivity.length > 0 ? (
+                    recentActivity.slice(0, 5).map((activity) => (
+                      <div key={activity.id} className="flex items-start space-x-4 p-3 rounded-lg hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-all duration-200">
+                        <div className={`flex-shrink-0 mt-1 ${getActivityColor(activity.severity)}`}>
+                          {getActivityIcon(activity.type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">{activity.message}</p>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                              activity.severity === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
+                              activity.severity === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' :
+                              'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
+                            }`}>
+                              {activity.severity}
+                            </span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {formatTimestamp(activity.timestamp)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 capitalize">
+                            {activity.service.replace('-', ' ')} • {activity.type.replace('_', ' ')}
+                          </p>
+                        </div>
                       </div>
-                      <div className="ml-3 flex-1">
-                        <p className="text-sm text-gray-900">{activity.message}</p>
-                        <p className="text-xs text-gray-500 mt-1">{activity.timestamp}</p>
-                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No recent activity</h3>
+                      <p className="text-gray-500 dark:text-gray-400">Activity will appear here as you use the platform</p>
                     </div>
-                  ))}
-                </div>
-                <div className="mt-6 text-center">
-                  <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                    View All Activity
-                  </button>
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
           {/* Quick Actions */}
-          <div className="mt-12 bg-white rounded-lg shadow p-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6 text-center">Quick Actions</h3>
+          <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-8">
+            <div className="text-center mb-8">
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Quick Actions</h3>
+              <p className="text-gray-600 dark:text-gray-400">Get started with these common tasks</p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <button
                 onClick={() => navigate('/apps')}
-                className="flex items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
+                className="group flex flex-col items-center p-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-300"
               >
-                <div className="text-center">
-                  <Plus className="h-8 w-8 text-gray-400 group-hover:text-blue-500 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-gray-900">Add New Integration</p>
-                  <p className="text-xs text-gray-500">Connect AWS, Azure, Office 365, and more</p>
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <Plus className="h-8 w-8 text-white" />
                 </div>
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Add Integration</h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center">Connect AWS, Azure, Office 365, and more</p>
               </button>
 
               <button
                 onClick={() => navigate('/users')}
-                className="flex items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors group"
+                className="group flex flex-col items-center p-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl hover:border-green-500 dark:hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all duration-300"
               >
-                <div className="text-center">
-                  <Users className="h-8 w-8 text-gray-400 group-hover:text-green-500 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-gray-900">Invite Users</p>
-                  <p className="text-xs text-gray-500">Add team members and assign roles</p>
+                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <Users className="h-8 w-8 text-white" />
                 </div>
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Manage Users</h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center">Add team members and assign roles</p>
               </button>
 
               <button
-                onClick={() => navigate('/settings')}
-                className="flex items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors group"
+                onClick={() => navigate('/analytics')}
+                className="group flex flex-col items-center p-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl hover:border-purple-500 dark:hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-300"
               >
-                <div className="text-center">
-                  <BarChart3 className="h-8 w-8 text-gray-400 group-hover:text-purple-500 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-gray-900">Generate Report</p>
-                  <p className="text-xs text-gray-500">Security, compliance, and cost reports</p>
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <BarChart3 className="h-8 w-8 text-white" />
                 </div>
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">View Analytics</h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center">Security, compliance, and cost reports</p>
               </button>
             </div>
           </div>

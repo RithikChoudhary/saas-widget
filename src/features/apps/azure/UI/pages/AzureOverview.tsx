@@ -16,22 +16,19 @@ import {
   CheckCircle,
   ExternalLink
 } from 'lucide-react';
-import { Layout } from '../../../shared/components';
-import { awsApi } from './services/awsApi';
+import { Layout } from '../../../../../shared/components';
+import { azureApi } from '../../services/azureApi';
 
-interface AWSStats {
-  totalAccounts: number;
+interface AzureStats {
+  totalSubscriptions: number;
   totalUsers: number;
   totalResources: number;
   monthlyCost: number;
   lastSync: string;
   securityScore: number;
-  totalGroups?: number;
-  hasOrganizations?: boolean;
-  hasBillingData?: boolean;
 }
 
-interface AWSService {
+interface AzureService {
   id: string;
   name: string;
   description: string;
@@ -41,10 +38,10 @@ interface AWSService {
   count?: number;
 }
 
-const AWSOverview: React.FC = () => {
+const AzureOverview: React.FC = () => {
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<AWSStats>({
-    totalAccounts: 0,
+  const [stats, setStats] = useState<AzureStats>({
+    totalSubscriptions: 0,
     totalUsers: 0,
     totalResources: 0,
     monthlyCost: 0,
@@ -53,96 +50,74 @@ const AWSOverview: React.FC = () => {
   });
   const navigate = useNavigate();
 
-  const getServiceStatus = (serviceId: string): 'active' | 'setup-required' | 'available' => {
-    if (stats.totalAccounts === 0) {
-      return 'setup-required';
-    }
-    
-    switch (serviceId) {
-      case 'connections':
-        return 'active';
-      case 'users':
-        return stats.totalUsers > 0 || (stats.totalGroups && stats.totalGroups > 0) ? 'active' : 'available';
-      case 'organizations':
-        return stats.hasOrganizations ? 'active' : 'available';
-      case 'billing':
-        return stats.hasBillingData || stats.monthlyCost > 0 ? 'active' : 'available';
-      case 'resources':
-        return stats.totalResources > 0 ? 'active' : 'available';
-      case 'security':
-        return stats.securityScore > 0 ? 'active' : 'available';
-      default:
-        return 'available';
-    }
-  };
-
-  const awsServices: AWSService[] = [
+  const azureServices: AzureService[] = [
     {
-      id: 'connections',
-      name: 'Account Connections',
-      description: 'Manage multiple AWS account connections and access methods',
+      id: 'subscriptions',
+      name: 'Subscription Management',
+      description: 'Manage Azure subscriptions and billing accounts',
       icon: Cloud,
-      route: '/apps/aws/connections',
-      status: getServiceStatus('connections'),
-      count: stats.totalAccounts
+      route: '/apps/azure/subscriptions',
+      status: 'setup-required'
     },
     {
-      id: 'users',
-      name: 'IAM Users & Groups',
-      description: 'Manage IAM users, groups, roles, and permissions',
+      id: 'ad',
+      name: 'Azure Active Directory',
+      description: 'Manage Azure AD users, groups, and applications',
       icon: Users,
-      route: '/apps/aws/users',
-      status: getServiceStatus('users'),
-      count: stats.totalUsers + (stats.totalGroups || 0)
+      route: '/apps/azure/ad',
+      status: 'available'
     },
     {
-      id: 'organizations',
-      name: 'Organizations & OUs',
-      description: 'Manage AWS Organizations and Organizational Units',
+      id: 'management',
+      name: 'Management Groups',
+      description: 'Organize resources with management groups and policies',
       icon: Server,
-      route: '/apps/aws/organizations',
-      status: getServiceStatus('organizations')
+      route: '/apps/azure/management',
+      status: 'available'
     },
     {
-      id: 'billing',
-      name: 'Billing & Cost Management',
-      description: 'Monitor costs, budgets, and optimize spending',
+      id: 'cost',
+      name: 'Cost Management',
+      description: 'Monitor costs, budgets, and optimize Azure spending',
       icon: DollarSign,
-      route: '/apps/aws/billing',
-      status: getServiceStatus('billing')
+      route: '/apps/azure/cost',
+      status: 'available'
     },
     {
       id: 'security',
-      name: 'Security & Compliance',
-      description: 'Security posture, compliance monitoring, and policies',
+      name: 'Security Center',
+      description: 'Security posture management and threat protection',
       icon: Shield,
-      route: '/apps/aws/security',
-      status: getServiceStatus('security')
+      route: '/apps/azure/security',
+      status: 'available'
     },
     {
       id: 'resources',
       name: 'Resource Management',
-      description: 'EC2, S3, Lambda, and other AWS resources',
+      description: 'Virtual machines, storage, and other Azure resources',
       icon: Database,
-      route: '/apps/aws/resources',
-      status: getServiceStatus('resources'),
-      count: stats.totalResources > 0 ? stats.totalResources : undefined
+      route: '/apps/azure/resources',
+      status: 'available'
     }
   ];
 
   useEffect(() => {
-    fetchAWSOverview();
+    fetchAzureOverview();
   }, []);
 
-  const fetchAWSOverview = async () => {
+  const fetchAzureOverview = async () => {
     try {
-      const data = await awsApi.getOverview();
-      setStats(data);
+      const response = await azureApi.getOverview();
+      if (response.data && response.data.success) {
+        setStats(response.data.data);
+      } else {
+        throw new Error('Invalid response format');
+      }
     } catch (error) {
-      console.error('Error fetching AWS overview:', error);
-      // No mock data - show real empty state
+      console.error('Error fetching Azure overview:', error);
+      // No mock data - real implementation needed
       setStats({
-        totalAccounts: 0,
+        totalSubscriptions: 0,
         totalUsers: 0,
         totalResources: 0,
         monthlyCost: 0,
@@ -203,24 +178,24 @@ const AWSOverview: React.FC = () => {
                   <ChevronRight className="h-5 w-5 rotate-180" />
                 </button>
                 <div className="flex items-center space-x-3">
-                  <span className="text-3xl">☁️</span>
+                  <span className="text-3xl">🔷</span>
                   <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Amazon Web Services</h1>
-                    <p className="mt-1 text-gray-600">Comprehensive cloud computing platform management</p>
+                    <h1 className="text-3xl font-bold text-gray-900">Microsoft Azure</h1>
+                    <p className="mt-1 text-gray-600">Cloud computing services for building, testing, and deploying applications</p>
                   </div>
                 </div>
               </div>
               <div className="flex space-x-3">
                 <button
-                  onClick={() => navigate('/apps/aws/connections')}
+                  onClick={() => navigate('/apps/azure/subscriptions')}
                   className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Account
+                  Connect Subscription
                 </button>
                 <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                   <ExternalLink className="h-4 w-4 mr-2" />
-                  AWS Console
+                  Azure Portal
                 </button>
               </div>
             </div>
@@ -236,8 +211,8 @@ const AWSOverview: React.FC = () => {
                   <Cloud className="h-8 w-8 text-blue-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Accounts</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalAccounts}</p>
+                  <p className="text-sm font-medium text-gray-600">Subscriptions</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.totalSubscriptions}</p>
                 </div>
               </div>
             </div>
@@ -248,7 +223,7 @@ const AWSOverview: React.FC = () => {
                   <Users className="h-8 w-8 text-green-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">IAM Users</p>
+                  <p className="text-sm font-medium text-gray-600">AD Users</p>
                   <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
                 </div>
               </div>
@@ -303,36 +278,34 @@ const AWSOverview: React.FC = () => {
             </div>
           </div>
 
-          {/* Connection Status Banner - Only show when no accounts connected */}
-          {stats.totalAccounts === 0 && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-8">
-              <div className="flex items-center">
-                <AlertTriangle className="h-6 w-6 text-yellow-600 mr-3" />
-                <div>
-                  <h3 className="text-lg font-semibold text-yellow-800">AWS Integration Setup Required</h3>
-                  <p className="text-yellow-700 mt-1">
-                    Connect your AWS accounts to start managing your cloud infrastructure. 
-                    <button 
-                      onClick={() => navigate('/apps/aws/connections')}
-                      className="ml-2 text-yellow-800 underline hover:text-yellow-900"
-                    >
-                      Get started →
-                    </button>
-                  </p>
-                </div>
+          {/* Connection Status */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-8">
+            <div className="flex items-center">
+              <AlertTriangle className="h-6 w-6 text-yellow-600 mr-3" />
+              <div>
+                <h3 className="text-lg font-semibold text-yellow-800">Azure Integration Setup Required</h3>
+                <p className="text-yellow-700 mt-1">
+                  Connect your Azure subscriptions to start managing your cloud resources. 
+                  <button 
+                    onClick={() => navigate('/apps/azure/subscriptions')}
+                    className="ml-2 text-yellow-800 underline hover:text-yellow-900"
+                  >
+                    Get started →
+                  </button>
+                </p>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* AWS Services */}
+          {/* Azure Services */}
           <div className="bg-white rounded-lg shadow">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">AWS Management Areas</h3>
-              <p className="text-sm text-gray-600">Access different AWS management capabilities</p>
+              <h3 className="text-lg font-semibold text-gray-900">Azure Management Areas</h3>
+              <p className="text-sm text-gray-600">Access different Azure management capabilities</p>
             </div>
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {awsServices.map((service) => {
+                {azureServices.map((service) => {
                   const ServiceIcon = service.icon;
                   return (
                     <div
@@ -374,45 +347,43 @@ const AWSOverview: React.FC = () => {
             </div>
           </div>
 
-          {/* Getting Started Guide - Only show when no accounts connected */}
-          {stats.totalAccounts === 0 && (
-            <div className="mt-8 bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Getting Started with AWS</h3>
-              </div>
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="text-center">
-                    <div className="mx-auto h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                      <Cloud className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-2">1. Connect Accounts</h4>
-                    <p className="text-sm text-gray-600">Link your AWS accounts using cross-account roles or access keys</p>
+          {/* Getting Started */}
+          <div className="mt-8 bg-white rounded-lg shadow">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Getting Started with Azure</h3>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <div className="mx-auto h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                    <Cloud className="h-6 w-6 text-blue-600" />
                   </div>
-                  
-                  <div className="text-center">
-                    <div className="mx-auto h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                      <Users className="h-6 w-6 text-green-600" />
-                    </div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-2">2. Manage Users</h4>
-                    <p className="text-sm text-gray-600">Set up IAM user and group management across your accounts</p>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">1. Connect Subscriptions</h4>
+                  <p className="text-sm text-gray-600">Link your Azure subscriptions to start managing resources</p>
+                </div>
+                
+                <div className="text-center">
+                  <div className="mx-auto h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+                    <Users className="h-6 w-6 text-green-600" />
                   </div>
-                  
-                  <div className="text-center">
-                    <div className="mx-auto h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                      <Shield className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-2">3. Monitor & Secure</h4>
-                    <p className="text-sm text-gray-600">Enable security monitoring and cost management</p>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">2. Configure Azure AD</h4>
+                  <p className="text-sm text-gray-600">Set up user and group management through Azure Active Directory</p>
+                </div>
+                
+                <div className="text-center">
+                  <div className="mx-auto h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+                    <Shield className="h-6 w-6 text-purple-600" />
                   </div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">3. Monitor & Secure</h4>
+                  <p className="text-sm text-gray-600">Enable security monitoring and cost management</p>
                 </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </Layout>
   );
 };
 
-export default AWSOverview;
+export default AzureOverview;

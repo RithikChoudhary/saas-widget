@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, ChevronDown, ChevronUp } from 'lucide-react';
-import api from '../../../../shared/utils/api';
+import api from '../../../../../shared/utils/api';
 
 interface CreateGroupModalProps {
   isOpen: boolean;

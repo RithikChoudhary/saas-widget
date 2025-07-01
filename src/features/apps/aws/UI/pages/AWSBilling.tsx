@@ -17,7 +17,7 @@ import {
   CreditCard,
   Receipt
 } from 'lucide-react';
-import { Layout } from '../../../shared/components';
+import { Layout } from '../../../../../shared/components';
 
 interface BillingSummary {
   currentMonthCost: number;
@@ -65,7 +65,7 @@ const AWSBilling: React.FC = () => {
       setLoading(true);
       
       // Fetch billing summary
-      const summaryResponse = await fetch(`/api/integrations/aws/billing/summary?period=${selectedPeriod}`, {
+      const summaryResponse = await fetch(`http://localhost:5000/api/integrations/aws/billing/summary?period=${selectedPeriod}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
@@ -79,7 +79,7 @@ const AWSBilling: React.FC = () => {
       }
 
       // Fetch cost trends
-      const trendsResponse = await fetch(`/api/integrations/aws/billing/trends?period=${selectedPeriod}`, {
+      const trendsResponse = await fetch(`http://localhost:5000/api/integrations/aws/billing/trends?period=${selectedPeriod}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
@@ -102,7 +102,7 @@ const AWSBilling: React.FC = () => {
     try {
       setSyncing(true);
       
-      const response = await fetch('/api/integrations/aws/billing/sync', {
+      const response = await fetch('http://localhost:5000/api/integrations/aws/billing/sync', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`

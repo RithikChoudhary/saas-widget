@@ -1,4 +1,12 @@
-export { default as GitHubOverview } from './GitHubOverview';
-export { default as GitHubUsers } from './GitHubUsers';
-export { default as GitHubTeams } from './GitHubTeams';
-export { default as GitHubRepositories } from './GitHubRepositories';
+// Export all GitHub UI components and pages from the UI folder
+export {
+  GitHubOverview,
+  GitHubUsers,
+  GitHubConnections,
+  GitHubRepositories,
+  GitHubTeams,
+  GitHubPackages
+} from './UI';
+
+// Export GitHub services (integration logic)
+export * from './services/githubApi';

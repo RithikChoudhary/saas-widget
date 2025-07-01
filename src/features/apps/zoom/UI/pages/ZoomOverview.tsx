@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../../shared/utils/api';
-import { Layout } from '../../../shared/components';
+import api from '../../../../../shared/utils/api';
+import { Layout } from '../../../../../shared/components';
 
 interface Connection {
   id: string;

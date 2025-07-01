@@ -20,10 +20,10 @@ import {
   Lock,
   Settings
 } from 'lucide-react';
-import { Layout } from '../../../shared/components';
-import CreateUserModal from './components/CreateUserModal';
-import EditUserModal from './components/EditUserModal';
-import CreateGroupModal from './components/CreateGroupModal';
+import { Layout } from '../../../../../shared/components';
+import CreateUserModal from '../components/CreateUserModal';
+import EditUserModal from '../components/EditUserModal';
+import CreateGroupModal from '../components/CreateGroupModal';
 
 interface AWSUser {
   id: string;

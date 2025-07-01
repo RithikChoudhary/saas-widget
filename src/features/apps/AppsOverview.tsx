@@ -7,38 +7,36 @@ import {
   DollarSign, 
   Activity,
   Cloud,
-  Mail,
-  Code,
-  ExternalLink,
+  Search,
+  Filter,
+  RefreshCw,
   CheckCircle,
   AlertTriangle,
   Clock,
-  Search,
-  Filter,
-  Grid,
-  List,
   TrendingUp,
   Shield,
   Zap,
-  Database,
-  Globe,
-  Smartphone,
-  Monitor,
-  Wifi,
-  Star,
+  Eye,
+  ExternalLink,
   ArrowRight,
   BarChart3,
-  PieChart,
-  RefreshCw
+  Sparkles,
+  ChevronUp,
+  ChevronDown,
+  Star,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { Layout } from '../../shared/components';
 
-interface ServiceCategory {
-  id: string;
-  name: string;
-  icon: React.ComponentType<any>;
-  description: string;
-  services: Service[];
+interface DashboardStats {
+  connectedServices: number;
+  totalUsers: number;
+  totalMonthlyCost: number;
+  totalAccounts: number;
+  costSavings: number;
+  securityScore: number;
+  activeIntegrations: number;
 }
 
 interface Service {
@@ -46,320 +44,95 @@ interface Service {
   name: string;
   icon: string;
   description: string;
+  category: string;
   status: 'connected' | 'available' | 'coming-soon';
-  accounts?: number;
-  connectedAccounts?: number;
-  users?: number;
-  lastSync?: string;
-  monthlyCost?: number;
+  accounts: number;
+  users: number;
+  monthlyCost: number;
+  lastSync: string | null;
+  health: string;
   features: string[];
   route: string;
+  details: any[];
+}
+
+interface ServiceCategory {
+  id: string;
+  name: string;
+  description: string;
+  services: Service[];
 }
 
 const AppsOverview: React.FC = () => {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
-  const [connectedServicesData, setConnectedServicesData] = useState<any[]>([]);
-  const [credentialsData, setCredentialsData] = useState<any[]>([]);
+  const [stats, setStats] = useState<DashboardStats>({
+    connectedServices: 0,
+    totalUsers: 0,
+    totalMonthlyCost: 0,
+    totalAccounts: 0,
+    costSavings: 0,
+    securityScore: 0,
+    activeIntegrations: 0
+  });
+  const [services, setServices] = useState<Service[]>([]);
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const navigate = useNavigate();
 
-  // Fetch real data from all connected services
   useEffect(() => {
-    const fetchConnectedServices = async () => {
-      try {
-        console.log('🔍 Apps Overview: Fetching connected services data...');
-        
-        // Fetch data from multiple endpoints to get comprehensive service status
-        const [credentialsResponse, analyticsResponse] = await Promise.allSettled([
-          fetch(`${import.meta.env.VITE_API_BASE_URL}/api/credentials`, {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-            }
-          }),
-          fetch(`${import.meta.env.VITE_API_BASE_URL}/api/analytics/dashboard`, {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-            }
-          })
-        ]);
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+    fetchAppsData();
+  }, [navigate]);
 
-        let servicesData: any[] = [];
-        let allCredentials: any[] = [];
-
-        // Process credentials data
-        if (credentialsResponse.status === 'fulfilled' && credentialsResponse.value.ok) {
-          const credentialsData = await credentialsResponse.value.json();
-          console.log('✅ Apps Overview: Credentials data received:', credentialsData.data);
-          allCredentials = credentialsData.data || [];
-          setCredentialsData(allCredentials);
-          
-          // Group credentials by app type
-          const credentialsByType = allCredentials.reduce((acc: any, cred: any) => {
-            if (!acc[cred.appType]) {
-              acc[cred.appType] = {
-                credentials: [],
-                connected: 0,
-                total: 0
-              };
-            }
-            acc[cred.appType].credentials.push(cred);
-            acc[cred.appType].total++;
-            if (cred.connectionStatus?.isConnected) {
-              acc[cred.appType].connected++;
-            }
-            return acc;
-          }, {});
-
-          // Create service data from credentials
-          Object.entries(credentialsByType).forEach(([appType, data]: [string, any]) => {
-            servicesData.push({
-              id: appType,
-              name: appType,
-              accounts: data.total,
-              connectedAccounts: data.connected,
-              users: 0, // Will be updated from analytics if available
-              monthlyCost: 0, // Will be updated from analytics if available
-              lastSync: data.credentials.find((c: any) => c.connectionStatus?.lastSync)?.connectionStatus.lastSync || null,
-              hasCredentials: true,
-              credentials: data.credentials
-            });
-          });
+  const fetchAppsData = async (showRefreshing = false) => {
+    try {
+      if (showRefreshing) setRefreshing(true);
+      
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/apps/dashboard`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
+      });
 
-        // Process analytics data if available
-        if (analyticsResponse.status === 'fulfilled' && analyticsResponse.value.ok) {
-          const analyticsData = await analyticsResponse.value.json();
-          console.log('✅ Apps Overview: Analytics data received:', analyticsData.data);
-          
-          if (analyticsData.data?.platformBreakdown) {
-            // Update service data with analytics information
-            Object.entries(analyticsData.data.platformBreakdown).forEach(([platform, userCount]: [string, any]) => {
-              const existingService = servicesData.find(s => s.id === platform);
-              if (existingService) {
-                existingService.users = userCount;
-              } else if (userCount > 0) {
-                // Add service even if no credentials but has users (from previous syncs)
-                servicesData.push({
-                  id: platform,
-                  name: platform,
-                  accounts: 0,
-                  connectedAccounts: 0,
-                  users: userCount,
-                  monthlyCost: 0,
-                  lastSync: 'Has Data',
-                  hasCredentials: false
-                });
-              }
-            });
-          }
-
-          // Add cost information if available
-          if (analyticsData.data?.overview?.totalLicenseCost) {
-            const totalCost = analyticsData.data.overview.totalLicenseCost;
-            const platformCount = servicesData.length;
-            if (platformCount > 0) {
-              const avgCostPerPlatform = totalCost / platformCount;
-              servicesData.forEach(service => {
-                service.monthlyCost = Math.round(avgCostPerPlatform);
-              });
-            }
-          }
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setStats(data.data.stats);
+          setServices(data.data.services);
+          setCategories(data.data.categories);
         }
-
-        console.log('📊 Apps Overview: Final services data:', servicesData);
-        setConnectedServicesData(servicesData);
-        
-      } catch (error) {
-        console.error('❌ Apps Overview: Error fetching connected services:', error);
-        setConnectedServicesData([]);
-      } finally {
-        setLoading(false);
+      } else {
+        console.error('Failed to fetch apps data:', response.statusText);
       }
-    };
-
-    fetchConnectedServices();
-  }, []);
-
-  // Helper function to get service data from connected services
-  const getServiceData = (serviceId: string) => {
-    const data = connectedServicesData.find(service => service.id === serviceId);
-    if (data) {
-      return {
-        ...data,
-        isConnected: data.connectedAccounts > 0
-      };
+    } catch (error) {
+      console.error('Error fetching apps data:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-    return null;
   };
 
-  // Refresh data
-  const refreshData = () => {
-    setLoading(true);
-    window.location.reload();
+  const handleRefresh = () => {
+    fetchAppsData(true);
   };
-
-  // Service categories with real data from connected services
-  const serviceCategories: ServiceCategory[] = [
-    {
-      id: 'cloud-providers',
-      name: 'Cloud Providers',
-      icon: Cloud,
-      description: 'Manage your cloud infrastructure and services',
-      services: [
-        {
-          id: 'aws',
-          name: 'Amazon Web Services',
-          icon: '☁️',
-          description: 'Comprehensive cloud computing platform with 200+ services',
-          status: getServiceData('aws')?.isConnected ? 'connected' : 'available',
-          accounts: getServiceData('aws')?.accounts || 0,
-          connectedAccounts: getServiceData('aws')?.connectedAccounts || 0,
-          users: getServiceData('aws')?.users || 0,
-          monthlyCost: getServiceData('aws')?.monthlyCost || 0,
-          lastSync: getServiceData('aws')?.lastSync ? new Date(getServiceData('aws').lastSync).toLocaleDateString() : undefined,
-          features: ['EC2 Instances', 'S3 Storage', 'IAM Management', 'Cost Optimization', 'Security Monitoring'],
-          route: '/apps/aws'
-        },
-        {
-          id: 'azure',
-          name: 'Microsoft Azure',
-          icon: '🔷',
-          description: 'Microsoft\'s cloud computing service for building, testing, and deploying applications',
-          status: 'available',
-          features: ['Virtual Machines', 'Azure AD', 'Storage Accounts', 'Cost Management', 'Security Center'],
-          route: '/apps/azure'
-        },
-        {
-          id: 'gcp',
-          name: 'Google Cloud Platform',
-          icon: '🌐',
-          description: 'Google\'s suite of cloud computing services',
-          status: 'coming-soon',
-          features: ['Compute Engine', 'Cloud Storage', 'IAM', 'BigQuery', 'Kubernetes Engine'],
-          route: '/apps/gcp'
-        }
-      ]
-    },
-    {
-      id: 'productivity-suites',
-      name: 'Productivity Suites',
-      icon: Mail,
-      description: 'Email, collaboration, and productivity tools',
-      services: [
-        {
-          id: 'office365',
-          name: 'Microsoft Office 365',
-          icon: '📧',
-          description: 'Complete productivity suite with email, documents, and collaboration tools',
-          status: 'available', // No mock data - real connection status needed
-          features: ['Exchange Online', 'SharePoint', 'Teams', 'OneDrive', 'Security & Compliance'],
-          route: '/apps/office365'
-        },
-        {
-          id: 'google-workspace',
-          name: 'Google Workspace',
-          icon: '📊',
-          description: 'Google\'s suite of productivity and collaboration tools',
-          status: 'available',
-          features: ['Gmail', 'Google Drive', 'Google Meet', 'Google Calendar', 'Admin Console'],
-          route: '/apps/google-workspace'
-        }
-      ]
-    },
-    {
-      id: 'development-tools',
-      name: 'Development Tools',
-      icon: Code,
-      description: 'Version control, CI/CD, and development platforms',
-      services: [
-        {
-          id: 'github',
-          name: 'GitHub',
-          icon: '🐙',
-          description: 'World\'s leading software development platform',
-          status: getServiceData('github')?.isConnected ? 'connected' : 'available',
-          accounts: getServiceData('github')?.accounts || 0,
-          connectedAccounts: getServiceData('github')?.connectedAccounts || 0,
-          users: getServiceData('github')?.users || 0,
-          monthlyCost: getServiceData('github')?.monthlyCost || 0,
-          lastSync: getServiceData('github')?.lastSync ? new Date(getServiceData('github').lastSync).toLocaleDateString() : undefined,
-          features: ['Repositories', 'Actions', 'Security', 'Team Management', 'Analytics'],
-          route: '/apps/github'
-        },
-        {
-          id: 'gitlab',
-          name: 'GitLab',
-          icon: '🦊',
-          description: 'Complete DevOps platform delivered as a single application',
-          status: 'available',
-          features: ['Git Repository', 'CI/CD', 'Issue Tracking', 'Security Scanning', 'Container Registry'],
-          route: '/apps/gitlab'
-        }
-      ]
-    },
-    {
-      id: 'communication-collaboration',
-      name: 'Communication & Collaboration',
-      icon: Users,
-      description: 'Team communication, video conferencing, and collaboration tools',
-      services: [
-        {
-          id: 'slack',
-          name: 'Slack',
-          icon: '💬',
-          description: 'Team communication and collaboration platform',
-          status: getServiceData('slack')?.isConnected ? 'connected' : 'available',
-          accounts: getServiceData('slack')?.accounts || 0,
-          connectedAccounts: getServiceData('slack')?.connectedAccounts || 0,
-          users: getServiceData('slack')?.users || 0,
-          monthlyCost: getServiceData('slack')?.monthlyCost || 0,
-          lastSync: getServiceData('slack')?.lastSync ? new Date(getServiceData('slack').lastSync).toLocaleDateString() : undefined,
-          features: ['Channels', 'Direct Messages', 'File Sharing', 'App Integrations', 'Workflow Automation'],
-          route: '/apps/slack'
-        },
-        {
-          id: 'zoom',
-          name: 'Zoom',
-          icon: '📹',
-          description: 'Video conferencing and communication platform',
-          status: getServiceData('zoom')?.isConnected ? 'connected' : 'available',
-          accounts: getServiceData('zoom')?.accounts || 0,
-          connectedAccounts: getServiceData('zoom')?.connectedAccounts || 0,
-          users: getServiceData('zoom')?.users || 0,
-          monthlyCost: getServiceData('zoom')?.monthlyCost || 0,
-          lastSync: getServiceData('zoom')?.lastSync ? new Date(getServiceData('zoom').lastSync).toLocaleDateString() : undefined,
-          features: ['Video Meetings', 'Webinars', 'Phone System', 'Chat', 'Rooms & Workspaces'],
-          route: '/apps/zoom'
-        },
-        {
-          id: 'microsoft-teams',
-          name: 'Microsoft Teams',
-          icon: '👥',
-          description: 'Chat, meetings, calling, and collaboration in one place',
-          status: 'coming-soon',
-          features: ['Team Chat', 'Video Meetings', 'File Collaboration', 'App Integration', 'Phone System'],
-          route: '/apps/teams'
-        }
-      ]
-    }
-  ];
-
-  useEffect(() => {
-    // Real implementation needed - fetch actual service connection status
-    // This should call APIs to check which services are actually connected
-    setTimeout(() => setLoading(false), 1000);
-  }, []);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'connected':
-        return <CheckCircle className="h-5 w-5 text-green-600" />;
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
       case 'available':
-        return <Clock className="h-5 w-5 text-blue-600" />;
+        return <Clock className="h-5 w-5 text-blue-500" />;
       case 'coming-soon':
-        return <AlertTriangle className="h-5 w-5 text-yellow-600" />;
+        return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
       default:
         return null;
     }
@@ -368,17 +141,32 @@ const AppsOverview: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'connected':
-        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Connected</span>;
+        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">Connected</span>;
       case 'available':
-        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Available</span>;
+        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">Available</span>;
       case 'coming-soon':
-        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Coming Soon</span>;
+        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">Coming Soon</span>;
       default:
         return null;
     }
   };
 
-  const filteredCategories = serviceCategories.map(category => ({
+  const getHealthIcon = (health: string, status: string) => {
+    if (status !== 'connected') return null;
+    
+    switch (health) {
+      case 'healthy':
+        return <Wifi className="h-4 w-4 text-green-500" />;
+      case 'warning':
+        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+      case 'error':
+        return <WifiOff className="h-4 w-4 text-red-500" />;
+      default:
+        return <Wifi className="h-4 w-4 text-green-500" />;
+    }
+  };
+
+  const filteredCategories = categories.map(category => ({
     ...category,
     services: category.services.filter(service => {
       const matchesSearch = service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -390,417 +178,428 @@ const AppsOverview: React.FC = () => {
     })
   })).filter(category => category.services.length > 0);
 
-  // Calculate real statistics from connected services
-  const totalConnectedServices = connectedServicesData.length;
-  const totalUsers = connectedServicesData.reduce((sum, service) => sum + (service.users || 0), 0);
-  const totalMonthlyCost = connectedServicesData.reduce((sum, service) => sum + (service.monthlyCost || 0), 0);
-  const activeIntegrations = connectedServicesData.reduce((sum, service) => sum + (service.accounts || 0), 0);
+  const formatTimestamp = (timestamp: string | null) => {
+    if (!timestamp) return 'Never';
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return `${days} days ago`;
+    return date.toLocaleDateString();
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
+      <Layout>
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="animate-pulse">
+              <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-2xl mb-8"></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
+                ))}
+              </div>
+              <div className="space-y-8">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-96 bg-gray-200 dark:bg-gray-700 rounded-2xl"></div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </Layout>
     );
   }
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <div className="bg-white shadow">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-6">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        {/* Hero Section */}
+        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 dark:from-blue-800 dark:via-purple-800 dark:to-blue-900 text-white relative overflow-hidden">
+          <div className="absolute inset-0 bg-black/10 dark:bg-black/20"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 dark:from-blue-800/30 dark:to-purple-800/30"></div>
+          
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <div className="flex items-center justify-between mb-8">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Apps & Services</h1>
-                <p className="mt-2 text-gray-600">Manage all your organization's SaaS applications and cloud services</p>
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                    <Sparkles className="h-7 w-7 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-4xl font-bold">Apps & Services</h1>
+                    <p className="text-blue-100 dark:text-blue-200 text-lg">Manage your organization's SaaS ecosystem</p>
+                  </div>
+                </div>
+                <p className="text-xl text-blue-100 dark:text-blue-200 max-w-3xl">
+                  Connect, monitor, and optimize all your cloud services from one powerful dashboard
+                </p>
               </div>
-              <button
-                onClick={() => {
-                  // Scroll to the services section
-                  const servicesSection = document.querySelector('.space-y-8');
-                  if (servicesSection) {
-                    servicesSection.scrollIntoView({ behavior: 'smooth' });
-                  }
-                }}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Connect New Service
-              </button>
+              
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="flex items-center px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-xl hover:bg-white/30 transition-all duration-200 disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                  {refreshing ? 'Refreshing...' : 'Refresh'}
+                </button>
+                <button
+                  onClick={() => {
+                    const firstAvailableService = services.find(s => s.status === 'available');
+                    if (firstAvailableService) {
+                      navigate(firstAvailableService.route);
+                    }
+                  }}
+                  className="flex items-center px-6 py-3 bg-white text-blue-600 rounded-xl font-semibold hover:bg-blue-50 transition-all duration-200 shadow-lg"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Connect Service
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-100 dark:text-blue-200 text-sm">Connected</p>
+                    <p className="text-2xl font-bold">{stats.connectedServices}</p>
+                  </div>
+                  <Cloud className="h-8 w-8 text-blue-200" />
+                </div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-100 dark:text-blue-200 text-sm">Users</p>
+                    <p className="text-2xl font-bold">{stats.totalUsers}</p>
+                  </div>
+                  <Users className="h-8 w-8 text-blue-200" />
+                </div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-100 dark:text-blue-200 text-sm">Monthly Cost</p>
+                    <p className="text-2xl font-bold">${stats.totalMonthlyCost}</p>
+                  </div>
+                  <DollarSign className="h-8 w-8 text-blue-200" />
+                </div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-100 dark:text-blue-200 text-sm">Security</p>
+                    <p className="text-2xl font-bold">{stats.securityScore}%</p>
+                  </div>
+                  <Shield className="h-8 w-8 text-blue-200" />
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Enhanced Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow-lg p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-green-100 text-sm font-medium">Connected Services</p>
-                  <p className="text-3xl font-bold">{totalConnectedServices}</p>
-                  <p className="text-green-100 text-xs mt-1">
-                    {totalConnectedServices > 0 ? '+12% from last month' : 'Connect your first service'}
-                  </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          {/* Enhanced Stats Dashboard */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                  <CheckCircle className="h-6 w-6 text-white" />
                 </div>
-                <div className="bg-green-400 bg-opacity-30 rounded-full p-3">
-                  <CheckCircle className="h-8 w-8" />
+                <div className="flex items-center text-green-600 dark:text-green-400 text-sm">
+                  <ChevronUp className="h-4 w-4" />
+                  <span>Active</span>
                 </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Connected Services</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.connectedServices}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {stats.connectedServices > 0 ? 'All systems operational' : 'No services connected'}
+                </p>
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-blue-100 text-sm font-medium">Total Users</p>
-                  <p className="text-3xl font-bold">{totalUsers.toLocaleString()}</p>
-                  <p className="text-blue-100 text-xs mt-1">
-                    {totalUsers > 0 ? 'Across all platforms' : 'No users synced yet'}
-                  </p>
+            <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                  <Users className="h-6 w-6 text-white" />
                 </div>
-                <div className="bg-blue-400 bg-opacity-30 rounded-full p-3">
-                  <Users className="h-8 w-8" />
+                <div className="flex items-center text-blue-600 dark:text-blue-400 text-sm">
+                  <TrendingUp className="h-4 w-4" />
+                  <span>Growing</span>
                 </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Total Users</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.totalUsers.toLocaleString()}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Across all platforms</p>
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg shadow-lg p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-yellow-100 text-sm font-medium">Monthly Cost</p>
-                  <p className="text-3xl font-bold">${totalMonthlyCost.toLocaleString()}</p>
-                  <p className="text-yellow-100 text-xs mt-1">
-                    {totalMonthlyCost > 0 ? 'Estimated spend' : 'No cost data available'}
-                  </p>
+            <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-white" />
                 </div>
-                <div className="bg-yellow-400 bg-opacity-30 rounded-full p-3">
-                  <DollarSign className="h-8 w-8" />
+                <div className="flex items-center text-yellow-600 dark:text-yellow-400 text-sm">
+                  <BarChart3 className="h-4 w-4" />
+                  <span>Tracked</span>
                 </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Monthly Cost</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">${stats.totalMonthlyCost.toLocaleString()}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {stats.costSavings > 0 ? `$${stats.costSavings} potential savings` : 'Cost optimization available'}
+                </p>
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-purple-100 text-sm font-medium">Active Integrations</p>
-                  <p className="text-3xl font-bold">{activeIntegrations}</p>
-                  <p className="text-purple-100 text-xs mt-1">
-                    {activeIntegrations > 0 ? 'Accounts configured' : 'No integrations yet'}
-                  </p>
+            <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                  <Shield className="h-6 w-6 text-white" />
                 </div>
-                <div className="bg-purple-400 bg-opacity-30 rounded-full p-3">
-                  <Activity className="h-8 w-8" />
+                <div className="flex items-center text-green-600 dark:text-green-400 text-sm">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Secure</span>
                 </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Security Score</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">{stats.securityScore}%</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {stats.securityScore >= 90 ? 'Excellent security' : stats.securityScore >= 70 ? 'Good security' : 'Needs improvement'}
+                </p>
               </div>
             </div>
           </div>
-
-          {/* Quick Actions */}
-          <div className="bg-white rounded-lg shadow mb-8">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
-              <p className="text-sm text-gray-600">Common tasks and shortcuts</p>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <button
-                  onClick={() => navigate('/credentials')}
-                  className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <Shield className="h-8 w-8 text-blue-600 mr-3" />
-                  <div className="text-left">
-                    <p className="font-medium text-gray-900">Manage Credentials</p>
-                    <p className="text-sm text-gray-600">Add API keys & tokens</p>
-                  </div>
-                </button>
-                
-                <button
-                  onClick={() => navigate('/analytics')}
-                  className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <BarChart3 className="h-8 w-8 text-green-600 mr-3" />
-                  <div className="text-left">
-                    <p className="font-medium text-gray-900">View Analytics</p>
-                    <p className="text-sm text-gray-600">Usage insights & reports</p>
-                  </div>
-                </button>
-                
-                <button
-                  onClick={() => {
-                    // Trigger sync for all connected services
-                    window.location.reload();
-                  }}
-                  className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <RefreshCw className="h-8 w-8 text-purple-600 mr-3" />
-                  <div className="text-left">
-                    <p className="font-medium text-gray-900">Sync All Data</p>
-                    <p className="text-sm text-gray-600">Refresh all connections</p>
-                  </div>
-                </button>
-                
-                <button
-                  onClick={() => navigate('/settings')}
-                  className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <Settings className="h-8 w-8 text-gray-600 mr-3" />
-                  <div className="text-left">
-                    <p className="font-medium text-gray-900">Settings</p>
-                    <p className="text-sm text-gray-600">Configure preferences</p>
-                  </div>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Popular Integrations */}
-          {totalConnectedServices === 0 && (
-            <div className="bg-white rounded-lg shadow mb-8">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Popular Integrations</h3>
-                <p className="text-sm text-gray-600">Most commonly used services by organizations</p>
-              </div>
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="text-center p-6 border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer"
-                       onClick={() => navigate('/apps/aws')}>
-                    <div className="mx-auto h-16 w-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
-                      <span className="text-2xl">☁️</span>
-                    </div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-2">Amazon Web Services</h4>
-                    <p className="text-sm text-gray-600 mb-4">Cloud infrastructure and services</p>
-                    <div className="flex items-center justify-center text-sm text-gray-500">
-                      <Star className="h-4 w-4 text-yellow-400 mr-1" />
-                      <span>Most Popular</span>
-                    </div>
-                  </div>
-                  
-                  <div className="text-center p-6 border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer"
-                       onClick={() => navigate('/apps/github')}>
-                    <div className="mx-auto h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                      <span className="text-2xl">🐙</span>
-                    </div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-2">GitHub</h4>
-                    <p className="text-sm text-gray-600 mb-4">Code repositories and collaboration</p>
-                    <div className="flex items-center justify-center text-sm text-gray-500">
-                      <TrendingUp className="h-4 w-4 text-green-400 mr-1" />
-                      <span>Developer Favorite</span>
-                    </div>
-                  </div>
-                  
-                  <div className="text-center p-6 border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer"
-                       onClick={() => navigate('/apps/slack')}>
-                    <div className="mx-auto h-16 w-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
-                      <span className="text-2xl">💬</span>
-                    </div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-2">Slack</h4>
-                    <p className="text-sm text-gray-600 mb-4">Team communication platform</p>
-                    <div className="flex items-center justify-center text-sm text-gray-500">
-                      <Zap className="h-4 w-4 text-blue-400 mr-1" />
-                      <span>Team Essential</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* No Services Connected Message */}
-          {totalConnectedServices === 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
-              <div className="flex items-center">
-                <AlertTriangle className="h-6 w-6 text-blue-600 mr-3" />
-                <div>
-                  <h3 className="text-lg font-semibold text-blue-800">No Services Connected</h3>
-                  <p className="text-blue-700 mt-1">
-                    Connect your first service to start managing your organization's SaaS applications and cloud infrastructure.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Filters */}
-          <div className="bg-white rounded-lg shadow mb-8">
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Search Services</label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search by name or description..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="all">All Categories</option>
-                    <option value="cloud-providers">Cloud Providers</option>
-                    <option value="productivity-suites">Productivity Suites</option>
-                    <option value="development-tools">Development Tools</option>
-                    <option value="communication-collaboration">Communication & Collaboration</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                  <select
-                    value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="connected">Connected</option>
-                    <option value="available">Available</option>
-                    <option value="coming-soon">Coming Soon</option>
-                  </select>
-                </div>
+          <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 p-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search services..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
+
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+                >
+                  <option value="all">All Categories</option>
+                  {categories.map(category => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="relative">
+                <Activity className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+                >
+                  <option value="all">All Status</option>
+                  <option value="connected">Connected</option>
+                  <option value="available">Available</option>
+                  <option value="coming-soon">Coming Soon</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+              <span>
+                Showing {filteredCategories.reduce((sum, cat) => sum + cat.services.length, 0)} of {services.length} services
+              </span>
+              <span>Last updated: {new Date().toLocaleTimeString()}</span>
             </div>
           </div>
 
           {/* Service Categories */}
           <div className="space-y-8">
-            {filteredCategories.map((category) => {
-              const CategoryIcon = category.icon;
-              return (
-                <div key={category.id} className="bg-white rounded-lg shadow">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <div className="flex items-center space-x-3">
-                      <CategoryIcon className="h-6 w-6 text-gray-600" />
-                      <div>
-                        <h2 className="text-xl font-semibold text-gray-900">{category.name}</h2>
-                        <p className="text-sm text-gray-600">{category.description}</p>
-                      </div>
+            {filteredCategories.map((category) => (
+              <div key={category.id} className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 dark:border-gray-700/50">
+                <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{category.name}</h2>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{category.description}</p>
                     </div>
-                  </div>
-
-                  <div className="p-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {category.services.map((service) => (
-                        <div key={service.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center space-x-3">
-                              <span className="text-3xl">{service.icon}</span>
-                              <div>
-                                <div className="flex items-center space-x-2">
-                                  <h3 className="text-lg font-semibold text-gray-900">{service.name}</h3>
-                                  {getStatusIcon(service.status)}
-                                </div>
-                                <p className="text-sm text-gray-600 mt-1">{service.description}</p>
-                              </div>
-                            </div>
-                            {getStatusBadge(service.status)}
-                          </div>
-
-                          {/* Service Stats - Only show if connected and has data */}
-                          {service.status === 'connected' && (service.accounts || service.users || service.monthlyCost || service.lastSync) && (
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
-                              {service.accounts && (
-                                <div className="text-center">
-                                  <p className="text-sm font-medium text-gray-900">{service.accounts}</p>
-                                  <p className="text-xs text-gray-600">Accounts</p>
-                                </div>
-                              )}
-                              {service.users && (
-                                <div className="text-center">
-                                  <p className="text-sm font-medium text-gray-900">{service.users}</p>
-                                  <p className="text-xs text-gray-600">Users</p>
-                                </div>
-                              )}
-                              {service.monthlyCost && (
-                                <div className="text-center">
-                                  <p className="text-sm font-medium text-gray-900">${service.monthlyCost}</p>
-                                  <p className="text-xs text-gray-600">Monthly</p>
-                                </div>
-                              )}
-                              {service.lastSync && (
-                                <div className="text-center">
-                                  <p className="text-sm font-medium text-gray-900">{service.lastSync}</p>
-                                  <p className="text-xs text-gray-600">Last Sync</p>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Features */}
-                          <div className="mb-4">
-                            <h4 className="text-sm font-medium text-gray-900 mb-2">Key Features</h4>
-                            <div className="flex flex-wrap gap-1">
-                              {service.features.slice(0, 3).map((feature, index) => (
-                                <span key={index} className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                  {feature}
-                                </span>
-                              ))}
-                              {service.features.length > 3 && (
-                                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                                  +{service.features.length - 3} more
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Actions */}
-                          <div className="flex space-x-2">
-                            {service.status === 'connected' ? (
-                              <>
-                                <button
-                                  onClick={() => navigate(service.route)}
-                                  className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                                >
-                                  <Settings className="h-4 w-4 mr-1" />
-                                  Manage
-                                </button>
-                                <button className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                                  <ExternalLink className="h-4 w-4" />
-                                </button>
-                              </>
-                            ) : service.status === 'available' ? (
-                              <button
-                                onClick={() => navigate(service.route)}
-                                className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
-                              >
-                                <Plus className="h-4 w-4 mr-1" />
-                                Connect
-                              </button>
-                            ) : (
-                              <button
-                                disabled
-                                className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-400 bg-gray-100 cursor-not-allowed"
-                              >
-                                <Clock className="h-4 w-4 mr-1" />
-                                Coming Soon
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      {category.services.length} service{category.services.length !== 1 ? 's' : ''}
                     </div>
                   </div>
                 </div>
-              );
-            })}
+
+                <div className="p-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {category.services.map((service) => (
+                      <div key={service.id} className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl p-6 hover:shadow-2xl hover:border-blue-300 dark:hover:border-blue-600 hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all duration-300 group">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center space-x-3">
+                            <span className="text-3xl">{service.icon}</span>
+                            <div>
+                              <div className="flex items-center space-x-2">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                  {service.name}
+                                </h3>
+                                {getStatusIcon(service.status)}
+                                {getHealthIcon(service.health, service.status)}
+                              </div>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{service.description}</p>
+                            </div>
+                          </div>
+                          {getStatusBadge(service.status)}
+                        </div>
+
+                        {/* Service Stats - Only show if connected and has data */}
+                        {service.status === 'connected' && (service.accounts || service.users || service.monthlyCost) && (
+                          <div className="grid grid-cols-3 gap-4 mb-4 p-3 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg">
+                            <div className="text-center">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">{service.accounts}</p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400">Accounts</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">{service.users}</p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400">Users</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                {service.monthlyCost > 0 ? `$${service.monthlyCost}` : 'Free'}
+                              </p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400">Monthly</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Last Sync Info */}
+                        {service.status === 'connected' && (
+                          <div className="mb-4 p-2 bg-blue-50/50 dark:bg-blue-900/20 rounded-lg">
+                            <p className="text-xs text-blue-700 dark:text-blue-300">
+                              Last sync: {formatTimestamp(service.lastSync)}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Features */}
+                        <div className="mb-4">
+                          <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Key Features</h4>
+                          <div className="flex flex-wrap gap-1">
+                            {service.features.slice(0, 3).map((feature, index) => (
+                              <span key={index} className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
+                                {feature}
+                              </span>
+                            ))}
+                            {service.features.length > 3 && (
+                              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">
+                                +{service.features.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex space-x-2">
+                          {service.status === 'connected' ? (
+                            <>
+                              <button
+                                onClick={() => navigate(service.route)}
+                                className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                              >
+                                <Settings className="h-4 w-4 mr-1" />
+                                Manage
+                              </button>
+                              <button 
+                                onClick={() => navigate(service.route)}
+                                className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+                            </>
+                          ) : service.status === 'available' ? (
+                            <button
+                              onClick={() => navigate(service.route)}
+                              className="flex-1 inline-flex items-center justify-center px-4 py-3 border border-transparent text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Connect Now
+                              <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                            </button>
+                          ) : (
+                            <button
+                              disabled
+                              className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-400 bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
+                            >
+                              <Clock className="h-4 w-4 mr-1" />
+                              Coming Soon
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
 
+          {/* No Services Found */}
           {filteredCategories.length === 0 && (
             <div className="text-center py-12">
               <div className="text-gray-400 mb-4">
                 <Search className="h-12 w-12 mx-auto" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No services found</h3>
-              <p className="text-gray-600">Try adjusting your search or filter criteria</p>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No services found</h3>
+              <p className="text-gray-600 dark:text-gray-400">Try adjusting your search or filter criteria</p>
+            </div>
+          )}
+
+          {/* Empty State for No Connected Services */}
+          {stats.connectedServices === 0 && filteredCategories.length > 0 && (
+            <div className="bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-8 mb-8">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Cloud className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-blue-900 dark:text-blue-100 mb-2">Ready to get started?</h3>
+                <p className="text-blue-700 dark:text-blue-300 mb-6 max-w-md mx-auto">
+                  Connect your first service to start managing your organization's SaaS applications and cloud infrastructure.
+                </p>
+                <button
+                  onClick={() => {
+                    const firstAvailableService = services.find(s => s.status === 'available');
+                    if (firstAvailableService) {
+                      navigate(firstAvailableService.route);
+                    }
+                  }}
+                  className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors shadow-lg"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Connect Your First Service
+                </button>
+              </div>
             </div>
           )}
         </div>
