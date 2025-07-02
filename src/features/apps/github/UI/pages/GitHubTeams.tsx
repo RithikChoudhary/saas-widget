@@ -16,8 +16,11 @@ import {
   Building,
   FolderOpen,
   ChevronRight,
-  AlertCircle
+  AlertCircle,
+  ChevronLeft,
+  Settings
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface Team {
   id: string;
@@ -62,6 +65,7 @@ interface Connection {
 }
 
 const GitHubTeams: React.FC = () => {
+  const navigate = useNavigate();
   const [teams, setTeams] = useState<Team[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
@@ -74,6 +78,7 @@ const GitHubTeams: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [editingMemberRole, setEditingMemberRole] = useState<string | null>(null);
 
   // Form states
   const [teamForm, setTeamForm] = useState({
@@ -266,6 +271,25 @@ const GitHubTeams: React.FC = () => {
     }
   };
 
+  const handleChangeRole = async (username: string, newRole: 'member' | 'maintainer') => {
+    if (!selectedTeam) return;
+
+    try {
+      await api.patch(`/integrations/github/teams/${selectedTeam.slug}/members/${username}`, {
+        connectionId: selectedTeam.connection.id,
+        role: newRole
+      });
+      
+      alert(`Role updated to ${newRole} successfully!`);
+      fetchTeamMembers(selectedTeam.id);
+      setEditingMemberRole(null);
+    } catch (error) {
+      console.error('Error changing member role:', error);
+      alert('Failed to change member role');
+      setEditingMemberRole(null);
+    }
+  };
+
   const openEditModal = (team: Team) => {
     setSelectedTeam(team);
     setTeamForm({
@@ -287,9 +311,17 @@ const GitHubTeams: React.FC = () => {
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">GitHub Teams</h1>
-            <p className="text-gray-600 mt-1">Organize users into teams and manage repository access</p>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => navigate('/apps/github')}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">GitHub Teams</h1>
+              <p className="text-gray-600 mt-1">Organize users into teams and manage repository access</p>
+            </div>
           </div>
           <div className="flex space-x-3">
             <button
@@ -577,21 +609,39 @@ const GitHubTeams: React.FC = () => {
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                            <span className={`inline-flex items-center px-2 py-1 text-xs rounded-full ${
-                              member.role === 'maintainer' 
-                                ? 'bg-purple-100 text-purple-800' 
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
+                          {editingMemberRole === member.user.login ? (
+                            <select
+                              value={member.role}
+                              onChange={(e) => handleChangeRole(member.user.login, e.target.value as 'member' | 'maintainer')}
+                              onBlur={() => setEditingMemberRole(null)}
+                              className="text-xs border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              autoFocus
+                            >
+                              <option value="member">Member</option>
+                              <option value="maintainer">Maintainer</option>
+                            </select>
+                          ) : (
+                            <button
+                              onClick={() => setEditingMemberRole(member.user.login)}
+                              className={`inline-flex items-center px-2 py-1 text-xs rounded-full hover:opacity-80 transition-opacity ${
+                                member.role === 'maintainer' 
+                                  ? 'bg-purple-100 text-purple-800' 
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}
+                              title="Click to change role"
+                            >
                               {member.role === 'maintainer' && <Shield className="h-3 w-3 mr-1" />}
                               {member.role}
-                            </span>
-                            <button
-                              onClick={() => handleRemoveMember(member.user.login)}
-                              className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                              title="Remove member"
-                            >
-                              <UserMinus className="h-4 w-4" />
+                              <Edit2 className="h-3 w-3 ml-1" />
                             </button>
+                          )}
+                          <button
+                            onClick={() => handleRemoveMember(member.user.login)}
+                            className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                            title="Remove member"
+                          >
+                            <UserMinus className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
                     </div>

@@ -27,7 +27,8 @@ import {
   Wifi,
   WifiOff
 } from 'lucide-react';
-import { Layout } from '../../shared/components';
+import { Layout, AppIcon } from '../../shared/components';
+import { api } from '../../shared/utils';
 
 interface DashboardStats {
   connectedServices: number;
@@ -95,26 +96,21 @@ const AppsOverview: React.FC = () => {
     try {
       if (showRefreshing) setRefreshing(true);
       
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/apps/dashboard`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      console.log('🔄 Apps Overview: Fetching data from backend...');
+      
+      const response = await api.get('/apps/dashboard');
+      console.log('📊 Apps dashboard response:', response.data);
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setStats(data.data.stats);
-          setServices(data.data.services);
-          setCategories(data.data.categories);
-        }
+      if (response.data.success) {
+        setStats(response.data.data.stats);
+        setServices(response.data.data.services);
+        setCategories(response.data.data.categories);
+        console.log('✅ Apps data updated successfully');
       } else {
-        console.error('Failed to fetch apps data:', response.statusText);
+        console.error('❌ Failed to fetch apps data:', response.data.message);
       }
     } catch (error) {
-      console.error('Error fetching apps data:', error);
+      console.error('❌ Error fetching apps data:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -459,7 +455,9 @@ const AppsOverview: React.FC = () => {
                       <div key={service.id} className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 rounded-2xl p-6 hover:shadow-2xl hover:border-blue-300 dark:hover:border-blue-600 hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all duration-300 group">
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex items-center space-x-3">
-                            <span className="text-3xl">{service.icon}</span>
+                            <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                              <AppIcon appType={service.id} size="lg" />
+                            </div>
                             <div>
                               <div className="flex items-center space-x-2">
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">

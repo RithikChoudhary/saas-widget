@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set Authentication Token</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .info {
+            color: #007bff;
+            margin: 10px 0;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .token-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Set Authentication Token</h1>
+        <p>This page will set the authentication token for the SaaS Management Platform.</p>
+        
+        <div class="info">
+            <strong>Token:</strong>
+            <div class="token-display">
+                eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODVhNDZjODZjZmIxZDA3NWI3M2RmZTMiLCJjb21wYW55SWQiOiI2ODViMDlmNmRjMTI3YjI5MmJlM2E5NjkiLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImVtYWlsIjoiYnVybnQ3NzZAZ21haWwuY29tIiwiaWF0IjoxNzUxMzY2MzY2LCJleHAiOjE3NTE0NTI3NjZ9.DL7z7ZTkcEuL1vNNCobIC65uTEad-b3Vq1YZ02-HblU
+            </div>
+        </div>
+        
+        <div class="info">
+            <strong>Company ID:</strong> 685b09f6dc127b292be3a969
+        </div>
+        
+        <button onclick="setToken()">🔑 Set Authentication Token</button>
+        <button onclick="clearToken()">🗑️ Clear Token</button>
+        <button onclick="goToDashboard()">🏠 Go to Dashboard</button>
+        
+        <div id="status"></div>
+        
+        <h3>📊 Available Data:</h3>
+        <ul>
+            <li>✅ <strong>152 Google Workspace Users</strong></li>
+            <li>✅ <strong>98 Google Workspace Groups</strong></li>
+            <li>✅ <strong>2 Active Connections</strong></li>
+        </ul>
+        
+        <h3>🔧 Manual Setup (if needed):</h3>
+        <ol>
+            <li>Open browser dev tools (F12)</li>
+            <li>Go to Application → Local Storage → http://localhost:3003</li>
+            <li>Set <code>accessToken</code> to the token above</li>
+            <li>Set <code>companyId</code> to: <code>685b09f6dc127b292be3a969</code></li>
+            <li>Refresh the page</li>
+        </ol>
+    </div>
+
+    <script>
+        const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODVhNDZjODZjZmIxZDA3NWI3M2RmZTMiLCJjb21wYW55SWQiOiI2ODViMDlmNmRjMTI3YjI5MmJlM2E5NjkiLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImVtYWlsIjoiYnVybnQ3NzZAZ21haWwuY29tIiwiaWF0IjoxNzUxMzY2MzY2LCJleHAiOjE3NTE0NTI3NjZ9.DL7z7ZTkcEuL1vNNCobIC65uTEad-b3Vq1YZ02-HblU';
+        const companyId = '685b09f6dc127b292be3a969';
+        
+        function setToken() {
+            try {
+                localStorage.setItem('accessToken', token);
+                localStorage.setItem('companyId', companyId);
+                localStorage.setItem('user', JSON.stringify({
+                    userId: '685a46c86cfb1d075b73dfe3',
+                    companyId: companyId,
+                    role: 'COMPANY_ADMIN',
+                    email: 'burnt776@gmail.com'
+                }));
+                
+                document.getElementById('status').innerHTML = '<div class="success">✅ Token set successfully! You can now use the application.</div>';
+            } catch (error) {
+                document.getElementById('status').innerHTML = '<div style="color: red;">❌ Error setting token: ' + error.message + '</div>';
+            }
+        }
+        
+        function clearToken() {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('companyId');
+            localStorage.removeItem('user');
+            document.getElementById('status').innerHTML = '<div style="color: orange;">🗑️ Token cleared.</div>';
+        }
+        
+        function goToDashboard() {
+            window.location.href = '/';
+        }
+        
+        // Auto-set token on page load
+        window.onload = function() {
+            setToken();
+        };
+    </script>
+</body>
+</html>

@@ -184,9 +184,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     },
     { 
       name: 'Documentation', 
-      href: '/documentation', 
+      href: '/docs', 
       icon: Book,
-      description: 'Help and guides',
+      description: 'Integration guides',
       gradient: 'from-teal-500 to-teal-600'
     },
     { 

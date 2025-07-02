@@ -1,7 +1,20 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { LandingPage, LoginPage, RegisterPage } from './features/auth'
-import DocumentationPage from './features/auth/DocumentationPage'
 import UserManagementSolutionPage from './features/auth/UserManagementSolutionPage'
+import { 
+  DocumentationHub, 
+  IntegrationGuide,
+  PlatformOverview,
+  SlackIntegrationGuide,
+  GoogleWorkspaceIntegrationGuide,
+  GitHubIntegrationGuide,
+  AWSIntegrationGuide,
+  ZoomIntegrationGuide,
+  AzureIntegrationGuide,
+  Office365IntegrationGuide,
+  DatadogIntegrationGuide
+} from './features/documentation'
+import AuthenticationFAQ from './features/documentation/pages/AuthenticationFAQ'
 import CostOptimizationSolutionPage from './features/auth/CostOptimizationSolutionPage'
 import SecurityComplianceSolutionPage from './features/auth/SecurityComplianceSolutionPage'
 import BlogPage from './features/auth/BlogPage'
@@ -41,6 +54,10 @@ import {
   CrossPlatformUsers
 } from './features/analytics'
 import { Layout } from './shared/components'
+import GitHubAuth from './features/apps/github/UI/pages/GitHubAuth'
+import AWSAuth from './features/apps/aws/UI/pages/AWSAuth'
+import ZoomAuth from './features/apps/zoom/UI/pages/ZoomAuth'
+import DatadogAuth from './features/apps/datadog/UI/pages/DatadogAuth'
 
 function App() {
   return (
@@ -50,7 +67,20 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/documentation" element={<DocumentationPage />} />
+          {/* New Documentation System Routes */}
+          <Route path="/docs" element={<DocumentationHub />} />
+          <Route path="/docs/platform-overview" element={<PlatformOverview />} />
+          <Route path="/docs/integration-guide" element={<IntegrationGuide />} />
+          <Route path="/docs/integrations/slack" element={<SlackIntegrationGuide />} />
+          <Route path="/docs/integrations/google-workspace" element={<GoogleWorkspaceIntegrationGuide />} />
+          <Route path="/docs/integrations/github" element={<GitHubIntegrationGuide />} />
+          <Route path="/docs/integrations/aws" element={<AWSIntegrationGuide />} />
+          <Route path="/docs/integrations/zoom" element={<ZoomIntegrationGuide />} />
+          <Route path="/docs/integrations/azure" element={<AzureIntegrationGuide />} />
+          <Route path="/docs/integrations/office365" element={<Office365IntegrationGuide />} />
+          <Route path="/docs/integrations/datadog" element={<DatadogIntegrationGuide />} />
+          <Route path="/docs/authentication-faq" element={<AuthenticationFAQ />} />
+          
           <Route path="/user-management" element={<UserManagementSolutionPage />} />
           <Route path="/cost-optimization" element={<CostOptimizationSolutionPage />} />
           <Route path="/security-compliance" element={<SecurityComplianceSolutionPage />} />
@@ -63,6 +93,12 @@ function App() {
           <Route path="/credentials" element={<CredentialsManagement />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/company-settings" element={<CompanySettings />} />
+          
+          {/* Authentication Routes */}
+          <Route path="/apps/github/auth" element={<GitHubAuth />} />
+          <Route path="/apps/aws/auth" element={<AWSAuth />} />
+          <Route path="/apps/zoom/auth" element={<ZoomAuth />} />
+          <Route path="/apps/datadog/auth" element={<DatadogAuth />} />
           
           {/* AWS Routes */}
           <Route path="/apps/aws" element={<AWSOverview />} />

@@ -29,7 +29,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { api } from '../../shared/utils';
-import { Layout } from '../../shared/components';
+import { Layout, AppIcon } from '../../shared/components';
 
 interface DashboardStats {
   connectedServices: number;
@@ -89,6 +89,8 @@ const Dashboard: React.FC = () => {
     try {
       if (showRefreshing) setRefreshing(true);
       
+      console.log('🔄 Dashboard: Fetching data from backend...');
+      
       // Get user data from token
       const token = localStorage.getItem('accessToken');
       if (token) {
@@ -117,7 +119,10 @@ const Dashboard: React.FC = () => {
 
       // Fetch real dashboard overview data
       try {
+        console.log('📊 Fetching dashboard overview...');
         const overviewResponse = await api.get('/dashboard/overview');
+        console.log('📊 Overview response:', overviewResponse.data);
+        
         if (overviewResponse.data.success) {
           const data = overviewResponse.data.data;
           setStats({
@@ -128,43 +133,44 @@ const Dashboard: React.FC = () => {
             costSavings: data.costSavings || 0,
             securityScore: data.securityScore || 0
           });
+          console.log('✅ Dashboard stats updated:', data);
         }
       } catch (error) {
-        console.error('Error fetching dashboard overview:', error);
-        setStats({
-          connectedServices: 0,
-          totalUsers: 0,
-          activeIntegrations: 0,
-          monthlyCost: 0,
-          costSavings: 0,
-          securityScore: 0
-        });
+        console.error('❌ Error fetching dashboard overview:', error);
+        // Keep default values on error
       }
 
       // Fetch real connected services data
       try {
+        console.log('🔗 Fetching connected services...');
         const servicesResponse = await api.get('/dashboard/connected-services');
+        console.log('🔗 Services response:', servicesResponse.data);
+        
         if (servicesResponse.data.success) {
           const services = servicesResponse.data.data;
           setConnectedServices(services.map((service: any) => ({
             id: service.id,
             name: service.name,
             type: service.type,
-            status: service.status,
+            status: service.status || 'connected',
             users: service.users || 0,
-            lastSync: service.lastSync ? new Date(service.lastSync).toLocaleString() : 'Never',
-            accounts: service.accounts,
+            lastSync: service.lastSync || 'Never',
+            accounts: service.accounts || 0,
             monthlyCost: service.monthlyCost || 0
           })));
+          console.log(`✅ Connected services updated: ${services.length} services`);
         }
       } catch (error) {
-        console.error('Error fetching connected services:', error);
+        console.error('❌ Error fetching connected services:', error);
         setConnectedServices([]);
       }
 
       // Fetch real recent activity data
       try {
+        console.log('📝 Fetching recent activity...');
         const activityResponse = await api.get('/dashboard/recent-activity');
+        console.log('📝 Activity response:', activityResponse.data);
+        
         if (activityResponse.data.success) {
           const activities = activityResponse.data.data;
           setRecentActivity(activities.map((activity: any) => ({
@@ -172,17 +178,18 @@ const Dashboard: React.FC = () => {
             type: activity.type,
             service: activity.service,
             message: activity.message,
-            timestamp: new Date(activity.timestamp).toLocaleString(),
+            timestamp: activity.timestamp,
             severity: activity.severity
           })));
+          console.log(`✅ Recent activity updated: ${activities.length} activities`);
         }
       } catch (error) {
-        console.error('Error fetching recent activity:', error);
+        console.error('❌ Error fetching recent activity:', error);
         setRecentActivity([]);
       }
 
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error('❌ Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -492,7 +499,9 @@ const Dashboard: React.FC = () => {
                     connectedServices.map((service) => (
                       <div key={service.id} className="flex items-center justify-between p-4 border border-gray-200/50 dark:border-gray-700/50 rounded-xl hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-all duration-200">
                         <div className="flex items-center space-x-4">
-                          <div className="text-2xl">{getServiceIcon(service.type)}</div>
+                          <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                            <AppIcon appType={service.type} size="md" />
+                          </div>
                           <div>
                             <div className="flex items-center space-x-2">
                               <h4 className="font-medium text-gray-900 dark:text-white">{service.name}</h4>

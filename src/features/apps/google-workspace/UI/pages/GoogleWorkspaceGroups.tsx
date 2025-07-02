@@ -60,16 +60,24 @@ const GoogleWorkspaceGroups: React.FC = () => {
     try {
       setLoading(true);
       
+      const companyId = localStorage.getItem('companyId') || '1';
       const params = new URLSearchParams({
+        companyId,
         page: currentPage.toString(),
         limit: '50',
         ...(searchQuery && { search: searchQuery })
       });
 
+      console.log('🔍 Fetching groups with params:', params.toString());
+
       const response = await api.get(`/integrations/google-workspace/groups?${params}`);
+      
+      console.log('📊 Groups API response:', response.data);
       
       if (response.data.success) {
         let filteredGroups = response.data.groups || [];
+        
+        console.log('👥 Raw groups from API:', filteredGroups.length);
         
         // Apply client-side filters
         if (filterType !== 'all') {
@@ -78,12 +86,16 @@ const GoogleWorkspaceGroups: React.FC = () => {
           );
         }
         
+        console.log('👥 Filtered groups:', filteredGroups.length);
+        
         setGroups(filteredGroups);
         setTotalPages(response.data.pagination?.pages || 1);
         setTotalGroups(response.data.pagination?.total || 0);
+      } else {
+        console.error('❌ API returned success: false', response.data);
       }
     } catch (error) {
-      console.error('Error fetching groups:', error);
+      console.error('❌ Error fetching groups:', error);
     } finally {
       setLoading(false);
     }
@@ -96,8 +108,9 @@ const GoogleWorkspaceGroups: React.FC = () => {
       
       // Get the first connection
       const connectionsResponse = await api.get('/integrations/google-workspace/connections');
-      if (connectionsResponse.data.connections?.length > 0) {
-        const connectionId = connectionsResponse.data.connections[0].id;
+      if (connectionsResponse.data.success && connectionsResponse.data.connections?.length > 0) {
+        // Use _id instead of id for MongoDB ObjectId
+        const connectionId = connectionsResponse.data.connections[0]._id;
         
         await api.post('/integrations/google-workspace/sync/groups', {
           connectionId,
@@ -348,7 +361,7 @@ const GoogleWorkspaceGroups: React.FC = () => {
         {/* Group Details Modal */}
         {showGroupDetails && selectedGroup && (
           <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white">Group Details</h3>

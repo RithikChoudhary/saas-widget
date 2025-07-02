@@ -89,17 +89,25 @@ const GoogleWorkspaceUsers: React.FC = () => {
     try {
       setLoading(true);
       
+      const companyId = localStorage.getItem('companyId') || '1';
       const params = new URLSearchParams({
+        companyId,
         page: currentPage.toString(),
         limit: '50',
         ...(searchQuery && { search: searchQuery }),
         ...(filterStatus !== 'all' && { isActive: filterStatus === 'active' ? 'true' : 'false' })
       });
 
+      console.log('🔍 Fetching users with params:', params.toString());
+      
       const response = await api.get(`/integrations/google-workspace/users?${params}`);
+      
+      console.log('📊 Users API response:', response.data);
       
       if (response.data.success) {
         let filteredUsers = response.data.users || [];
+        
+        console.log('👥 Raw users from API:', filteredUsers.length);
         
         // Apply client-side filters
         if (filterAdmin !== 'all') {
@@ -114,12 +122,16 @@ const GoogleWorkspaceUsers: React.FC = () => {
           );
         }
         
+        console.log('👥 Filtered users:', filteredUsers.length);
+        
         setUsers(filteredUsers);
         setTotalPages(response.data.pagination?.pages || 1);
         setTotalUsers(response.data.pagination?.total || 0);
+      } else {
+        console.error('❌ API returned success: false', response.data);
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('❌ Error fetching users:', error);
     } finally {
       setLoading(false);
     }

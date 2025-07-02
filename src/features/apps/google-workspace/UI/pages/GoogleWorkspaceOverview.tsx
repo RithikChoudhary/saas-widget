@@ -42,7 +42,8 @@ import { Layout } from '../../../../../shared/components';
 import api from '../../../../../shared/utils/api';
 
 interface Connection {
-  id: string;
+  _id: string;
+  id?: string;
   domain: string;
   customerID: string;
   organizationName: string;
@@ -272,16 +273,48 @@ const GoogleWorkspaceOverview: React.FC = () => {
   const handleSync = async (connectionId: string) => {
     try {
       setSyncing(true);
-      const companyId = localStorage.getItem('companyId') || '1';
-      await api.post('/integrations/google-workspace/sync/all', { 
+      const companyId = localStorage.getItem('companyId');
+      
+      if (!companyId) {
+        alert('Company ID not found. Please log in again.');
+        return;
+      }
+      
+      if (!connectionId) {
+        alert('No connection ID provided. Please check your Google Workspace connection.');
+        return;
+      }
+      
+      console.log('🔄 Starting sync with:', { connectionId, companyId });
+      
+      const response = await api.post('/integrations/google-workspace/sync/all', { 
         connectionId: connectionId,
-        companyId 
+        companyId: companyId
       });
-      fetchData();
+      
+      console.log('✅ Sync response:', response.data);
+      
+      // Refresh data after successful sync
+      await fetchData();
       alert('Sync completed successfully!');
-    } catch (error) {
-      console.error('Error syncing:', error);
-      alert('Sync failed');
+    } catch (error: any) {
+      console.error('❌ Sync error:', error);
+      
+      // Provide more detailed error messages
+      let errorMessage = 'Sync failed. ';
+      if (error.response?.status === 400) {
+        errorMessage += 'Bad request - please check your connection settings.';
+      } else if (error.response?.status === 401) {
+        errorMessage += 'Authentication failed - please reconnect your Google Workspace.';
+      } else if (error.response?.status === 403) {
+        errorMessage += 'Permission denied - please check your Google Workspace permissions.';
+      } else if (error.response?.data?.message) {
+        errorMessage += error.response.data.message;
+      } else {
+        errorMessage += error.message || 'Unknown error occurred.';
+      }
+      
+      alert(errorMessage);
     } finally {
       setSyncing(false);
     }
@@ -400,7 +433,7 @@ const GoogleWorkspaceOverview: React.FC = () => {
                   </button>
                 ) : (
                   <button
-                    onClick={() => connections[0] && handleSync(connections[0].id)}
+                    onClick={() => connections[0] && handleSync(connections[0]._id)}
                     disabled={syncing}
                     className="flex items-center px-6 py-3 bg-white text-blue-600 rounded-xl font-semibold hover:bg-blue-50 transition-all duration-200 shadow-lg disabled:opacity-50"
                   >
