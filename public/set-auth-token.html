@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Set Authentication Token</title>
+    <title>Set Auth Token - SaaS Management Platform</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             max-width: 800px;
             margin: 50px auto;
             padding: 20px;
@@ -18,111 +18,199 @@
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        .success {
-            color: #28a745;
-            font-weight: bold;
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
         }
-        .info {
-            color: #007bff;
-            margin: 10px 0;
-        }
-        button {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin: 10px 5px;
-        }
-        button:hover {
-            background: #0056b3;
-        }
-        .token-display {
-            background: #f8f9fa;
-            padding: 15px;
+        .token-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
             border-radius: 5px;
             font-family: monospace;
+            font-size: 12px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+        .btn {
+            background: #6366f1;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+            font-size: 14px;
+        }
+        .btn:hover {
+            background: #5856eb;
+        }
+        .btn-secondary {
+            background: #6b7280;
+        }
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+        .current-token {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
             word-break: break-all;
-            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .instructions {
+            background: #eff6ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3b82f6;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🔐 Set Authentication Token</h1>
-        <p>This page will set the authentication token for the SaaS Management Platform.</p>
+        <h1>🔐 Authentication Token Setup</h1>
         
-        <div class="info">
-            <strong>Token:</strong>
-            <div class="token-display">
-                eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODVhNDZjODZjZmIxZDA3NWI3M2RmZTMiLCJjb21wYW55SWQiOiI2ODViMDlmNmRjMTI3YjI5MmJlM2E5NjkiLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImVtYWlsIjoiYnVybnQ3NzZAZ21haWwuY29tIiwiaWF0IjoxNzUxMzY2MzY2LCJleHAiOjE3NTE0NTI3NjZ9.DL7z7ZTkcEuL1vNNCobIC65uTEad-b3Vq1YZ02-HblU
-            </div>
+        <div class="instructions">
+            <strong>Instructions:</strong>
+            <ol>
+                <li>Use the test token below or paste your own JWT token</li>
+                <li>Click "Set Token" to save it to localStorage</li>
+                <li>Navigate to <a href="/apps/datadog" target="_blank">/apps/datadog</a> to test the Datadog integration</li>
+            </ol>
         </div>
-        
-        <div class="info">
-            <strong>Company ID:</strong> 685b09f6dc127b292be3a969
+
+        <div class="current-token">
+            <strong>Current Token:</strong><br>
+            <span id="currentToken">None set</span>
         </div>
-        
-        <button onclick="setToken()">🔑 Set Authentication Token</button>
-        <button onclick="clearToken()">🗑️ Clear Token</button>
-        <button onclick="goToDashboard()">🏠 Go to Dashboard</button>
-        
-        <div id="status"></div>
-        
-        <h3>📊 Available Data:</h3>
-        <ul>
-            <li>✅ <strong>152 Google Workspace Users</strong></li>
-            <li>✅ <strong>98 Google Workspace Groups</strong></li>
-            <li>✅ <strong>2 Active Connections</strong></li>
-        </ul>
-        
-        <h3>🔧 Manual Setup (if needed):</h3>
-        <ol>
-            <li>Open browser dev tools (F12)</li>
-            <li>Go to Application → Local Storage → http://localhost:3003</li>
-            <li>Set <code>accessToken</code> to the token above</li>
-            <li>Set <code>companyId</code> to: <code>685b09f6dc127b292be3a969</code></li>
-            <li>Refresh the page</li>
-        </ol>
+
+        <label for="tokenInput"><strong>JWT Token:</strong></label>
+        <textarea 
+            id="tokenInput" 
+            class="token-input" 
+            rows="4" 
+            placeholder="Paste your JWT token here..."
+        >eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODY1OWE4YWM1NWM0OGFkNzc0NmNmODUiLCJjb21wYW55SWQiOiI2ODY1OWE4OWM1NWM0OGFkNzc0NmNmODIiLCJlbWFpbCI6InRlc3RAdGVzdC5jb20iLCJyb2xlIjoiY29tcGFueV9hZG1pbiIsImlhdCI6MTc1MTQ4OTQzOSwiZXhwIjoxNzUxNTc1ODM5fQ.lnTXZyTSCB5lCsvmtQ124f_-6pitr8qKMKWg9exPNqQ</textarea>
+
+        <div>
+            <button class="btn" onclick="setToken()">Set Token</button>
+            <button class="btn btn-secondary" onclick="clearToken()">Clear Token</button>
+            <button class="btn btn-secondary" onclick="testAPI()">Test API</button>
+        </div>
+
+        <div id="status" class="status"></div>
     </div>
 
     <script>
-        const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODVhNDZjODZjZmIxZDA3NWI3M2RmZTMiLCJjb21wYW55SWQiOiI2ODViMDlmNmRjMTI3YjI5MmJlM2E5NjkiLCJyb2xlIjoiQ09NUEFOWV9BRE1JTiIsImVtYWlsIjoiYnVybnQ3NzZAZ21haWwuY29tIiwiaWF0IjoxNzUxMzY2MzY2LCJleHAiOjE3NTE0NTI3NjZ9.DL7z7ZTkcEuL1vNNCobIC65uTEad-b3Vq1YZ02-HblU';
-        const companyId = '685b09f6dc127b292be3a969';
-        
-        function setToken() {
-            try {
-                localStorage.setItem('accessToken', token);
-                localStorage.setItem('companyId', companyId);
-                localStorage.setItem('user', JSON.stringify({
-                    userId: '685a46c86cfb1d075b73dfe3',
-                    companyId: companyId,
-                    role: 'COMPANY_ADMIN',
-                    email: 'burnt776@gmail.com'
-                }));
-                
-                document.getElementById('status').innerHTML = '<div class="success">✅ Token set successfully! You can now use the application.</div>';
-            } catch (error) {
-                document.getElementById('status').innerHTML = '<div style="color: red;">❌ Error setting token: ' + error.message + '</div>';
+        // Display current token on page load
+        function displayCurrentToken() {
+            const token = localStorage.getItem('accessToken');
+            const currentTokenElement = document.getElementById('currentToken');
+            if (token) {
+                currentTokenElement.textContent = token.substring(0, 50) + '...';
+            } else {
+                currentTokenElement.textContent = 'None set';
             }
         }
-        
+
+        function setToken() {
+            const token = document.getElementById('tokenInput').value.trim();
+            const statusElement = document.getElementById('status');
+            
+            if (!token) {
+                showStatus('Please enter a token', 'error');
+                return;
+            }
+
+            try {
+                // Basic JWT validation
+                const parts = token.split('.');
+                if (parts.length !== 3) {
+                    throw new Error('Invalid JWT format');
+                }
+
+                // Store token
+                localStorage.setItem('accessToken', token);
+                
+                showStatus('Token set successfully! You can now access the Datadog integration.', 'success');
+                displayCurrentToken();
+                
+                // Auto-redirect after 2 seconds
+                setTimeout(() => {
+                    window.location.href = '/apps/datadog';
+                }, 2000);
+                
+            } catch (error) {
+                showStatus('Invalid token format. Please check your JWT token.', 'error');
+            }
+        }
+
         function clearToken() {
             localStorage.removeItem('accessToken');
-            localStorage.removeItem('companyId');
-            localStorage.removeItem('user');
-            document.getElementById('status').innerHTML = '<div style="color: orange;">🗑️ Token cleared.</div>';
+            showStatus('Token cleared successfully.', 'success');
+            displayCurrentToken();
         }
-        
-        function goToDashboard() {
-            window.location.href = '/';
+
+        async function testAPI() {
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                showStatus('No token set. Please set a token first.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/integrations/datadog/connections', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showStatus(`API test successful! Found ${data.data.length} connections.`, 'success');
+                } else {
+                    const error = await response.json();
+                    showStatus(`API test failed: ${error.message}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`API test failed: ${error.message}`, 'error');
+            }
         }
-        
-        // Auto-set token on page load
-        window.onload = function() {
-            setToken();
-        };
+
+        function showStatus(message, type) {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = message;
+            statusElement.className = `status ${type}`;
+            statusElement.style.display = 'block';
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                statusElement.style.display = 'none';
+            }, 5000);
+        }
+
+        // Initialize page
+        displayCurrentToken();
     </script>
 </body>
 </html>

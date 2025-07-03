@@ -45,6 +45,10 @@ import {
   GoogleWorkspaceUsers,
   GoogleWorkspaceGroups
 } from './features/apps'
+import DatadogOverview from './features/apps/datadog/UI/pages/DatadogOverview'
+import DatadogUsers from './features/apps/datadog/UI/pages/DatadogUsers'
+import DatadogTeams from './features/apps/datadog/UI/pages/DatadogTeams'
+import DatadogSettings from './features/apps/datadog/UI/pages/DatadogSettings'
 import { CredentialsManagement } from './features/credentials'
 import {
   AnalyticsDashboard,
@@ -289,6 +293,20 @@ function App() {
               <div className="p-8 text-center">
                 <h1 className="text-2xl font-bold text-gray-900 mb-4">Google Workspace Drives</h1>
                 <p className="text-gray-600">Coming Soon - Shared drives and storage analysis</p>
+              </div>
+            </Layout>
+          } />
+          
+          {/* Datadog Routes */}
+          <Route path="/apps/datadog" element={<DatadogOverview />} />
+          <Route path="/apps/datadog/users" element={<DatadogUsers />} />
+          <Route path="/apps/datadog/teams" element={<DatadogTeams />} />
+          <Route path="/apps/datadog/settings" element={<DatadogSettings />} />
+          <Route path="/apps/datadog/analytics" element={
+            <Layout>
+              <div className="p-8 text-center">
+                <h1 className="text-2xl font-bold text-gray-900 mb-4">Datadog Analytics</h1>
+                <p className="text-gray-600">Coming Soon - Usage analytics and cost optimization</p>
               </div>
             </Layout>
           } />

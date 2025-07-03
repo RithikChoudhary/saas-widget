@@ -198,7 +198,7 @@ const CredentialsManagement: React.FC = () => {
 
     if (service.status === 'setup-required') {
       // Show connection options if service supports multiple methods
-      if (['slack', 'google-workspace', 'github', 'zoom'].includes(service.id)) {
+      if (['slack', 'google-workspace', 'github', 'zoom', 'datadog'].includes(service.id)) {
         setSelectedService(service);
         setShowConnectionOptions(true);
         return;
@@ -1079,6 +1079,61 @@ const CredentialsManagement: React.FC = () => {
                             <div className="flex items-center mt-1">
                               <Settings className="h-4 w-4 text-blue-600 mr-1" />
                               <span className="text-xs text-blue-600">Advanced</span>
+                            </div>
+                          </div>
+                          <Key className="h-5 w-5 text-gray-400" />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {selectedService.id === 'datadog' && (
+                    <>
+                      {/* Google OAuth Option */}
+                      <div 
+                        className="border-2 border-gray-200 dark:border-gray-600 rounded-lg p-4 cursor-pointer hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900 transition-colors"
+                        onClick={() => {
+                          alert('Google OAuth for Datadog is coming soon! Please use API Keys for now.');
+                        }}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                            <Shield className="h-6 w-6 text-green-600 dark:text-green-400" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-medium text-gray-900 dark:text-white">Google OAuth (Coming Soon)</h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Connect using your Google account if your organization uses Datadog SSO
+                            </p>
+                            <div className="flex items-center mt-1">
+                              <Clock className="h-4 w-4 text-gray-500 mr-1" />
+                              <span className="text-xs text-gray-500">Coming Soon</span>
+                            </div>
+                          </div>
+                          <ExternalLink className="h-5 w-5 text-gray-400" />
+                        </div>
+                      </div>
+
+                      {/* API Keys Option */}
+                      <div 
+                        className="border-2 border-gray-200 dark:border-gray-600 rounded-lg p-4 cursor-pointer hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900 transition-colors"
+                        onClick={() => {
+                          setShowConnectionOptions(false);
+                          handleSetupCredentials(selectedService);
+                        }}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                            <Key className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-medium text-gray-900 dark:text-white">API Keys (Recommended)</h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              Manual setup using Datadog API and Application keys
+                            </p>
+                            <div className="flex items-center mt-1">
+                              <CheckCircle className="h-4 w-4 text-blue-600 mr-1" />
+                              <span className="text-xs text-blue-600">Available Now</span>
                             </div>
                           </div>
                           <Key className="h-5 w-5 text-gray-400" />
